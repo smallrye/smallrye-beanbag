@@ -132,6 +132,37 @@ public final class Sisu {
         supplierBuilder.build();
 
         beanBuilder.build();
+
+        // If the bean implements `Provider<Something>`, then also register the bean info under the thing it provides
+
+        for (Type genericInterface : clazz.getGenericInterfaces()) {
+            if (getRawType(genericInterface) == Provider.class) {
+                // it's a provider for something
+                addOneProvider(builder, genericInterface, clazz.asSubclass(Provider.class), named, priority);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T, P extends Provider<T>> void addOneProvider(BeanBag.Builder builder, Type genericInterface, Class<P> clazz, Named named, Priority priority) {
+        final Class<T> providedType = (Class<T>) getRawType(getTypeArgument(genericInterface, 0));
+        final BeanBag.BeanBuilder<T> providedBuilder = builder.addBean(providedType);
+        if (named != null) {
+            // replicate name from provider bean
+            providedBuilder.setName(named.value());
+        }
+        if (priority != null) {
+            // replicate priority from provider bean
+            int pv = priority.value();
+            if (pv >= 0 && named != null && named.value().equals("default")) {
+                // shift ranking in a similar way to how SISU does it
+                pv += Integer.MIN_VALUE;
+            }
+            providedBuilder.setPriority(pv);
+        }
+        final String name = named == null ? "" : named.value();
+        providedBuilder.setSupplier(BeanSupplier.resolving(clazz, name, false, DependencyFilter.ACCEPT).transform(Provider::get));
+        providedBuilder.build();
     }
 
     private static BeanSupplier<?> getSupplier(final Class<?> rawType, final Type parameterizedType, final String name, final boolean optional, final DependencyFilter filter) {
