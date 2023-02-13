@@ -2,7 +2,7 @@ package io.github.dmlloyd.unnamed.container;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -51,99 +51,185 @@ public final class Scope {
         return list;
     }
 
-    public <T> List<T> getAllBeansOfType(Class<T> type) {
-        return getAllBeansOfType(type, DependencyFilter.ACCEPT);
+    /**
+     * Get all constructable beans of the given type.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
+    public <T> List<T> getAllBeans(Class<T> type) {
+        return getAllBeans(type, DependencyFilter.ACCEPT);
     }
 
-    public <T> List<T> getAllBeansOfType(Class<T> type, DependencyFilter filter) {
+    /**
+     * Get all constructable beans of the given type.
+     * The filter is applied to each bean to determine whether it should be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
+    public <T> List<T> getAllBeans(Class<T> type, DependencyFilter filter) {
+        return getAllBeans(type, "", filter);
+    }
+
+    /**
+     * Get all constructable beans of the given type and name.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
+    public <T> List<T> getAllBeans(final Class<T> type, final String name) {
+        return getAllBeans(type, name, DependencyFilter.ACCEPT);
+    }
+
+    /**
+     * Get all constructable beans of the given type and name.
+     * The filter is applied to each bean to determine whether it should be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
+    public <T> List<T> getAllBeans(final Class<T> type, final String name, DependencyFilter filter) {
         final List<Bean<? extends T>> beans = getBeansByType(type);
         if (beans.isEmpty()) {
             return List.of();
         }
         final List<T> list = new ArrayList<>(beans.size());
         for (Bean<? extends T> bean : beans) {
-            final T instance = bean.get(this);
-            if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
-                list.add(instance);
-            }
-        }
-        return List.copyOf(list);
-    }
-
-    public <T> List<T> getAllBeansOfTypeAndName(final Class<T> type, final String name) {
-        return getAllBeansOfTypeAndName(type, name, DependencyFilter.ACCEPT);
-    }
-
-    public <T> List<T> getAllBeansOfTypeAndName(final Class<T> type, final String name, DependencyFilter filter) {
-        final List<Bean<? extends T>> beans = getBeansByType(type);
-        if (beans.isEmpty()) {
-            return List.of();
-        }
-        final List<T> list = new ArrayList<>(beans.size());
-        for (Bean<? extends T> bean : beans) {
-            final T instance = bean.get(this);
-            if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
-                list.add(instance);
-            }
-        }
-        return List.copyOf(list);
-    }
-
-    public <T> T requireBeanOfType(Class<T> type) {
-        final T instance = getOptionalBeanOfType(type);
-        if (instance != null) {
-            return instance;
-        }
-        throw new NoSuchBeanException("No beans of type " + type + " are available");
-    }
-
-    public <T> T requireBeanOfTypeAndName(Class<T> type, String name) {
-        final T instance = getOptionalBeanOfTypeAndName(type, name);
-        if (instance != null) {
-            return instance;
-        }
-        throw new NoSuchBeanException("No beans of type " + type + " with name " + name + " are available");
-    }
-
-    public <T> T getOptionalBeanOfType(Class<T> type) {
-        final List<Bean<? extends T>> beans = getBeansByType(type);
-        for (Bean<? extends T> bean : beans) {
-            final T instance = bean.get(this);
-            if (instance != null) {
-                return instance;
-            }
-        }
-        return null;
-    }
-
-    public <T> T getOptionalBeanOfTypeAndName(Class<T> type, String name) {
-        return getOptionalBeanOfTypeAndName(type, name, DependencyFilter.ACCEPT);
-    }
-
-    public <T> T getOptionalBeanOfTypeAndName(Class<T> type, String name, DependencyFilter filter) {
-        final List<Bean<? extends T>> beans = getBeansByType(type);
-        for (Bean<? extends T> bean : beans) {
-            if (bean.getName().equals(name)) {
+            if ((name.isEmpty() || bean.getName().equals(name)) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
                 final T instance = bean.get(this);
-                if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
-                    return instance;
+                if (instance != null) {
+                    list.add(instance);
                 }
             }
         }
-        return null;
+        return List.copyOf(list);
     }
 
+    /**
+     * Get all constructable beans of the given type as a map.
+     * The filter is applied to each bean to determine whether it should be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
+    public <T> Map<String, T> getAllBeansWithNames(final Class<T> type, final DependencyFilter filter) {
+        final List<Bean<? extends T>> beans = getBeansByType(type);
+        if (beans.isEmpty()) {
+            return Map.of();
+        }
+        final Map<String, T> map = new LinkedHashMap<>(beans.size());
+        for (Bean<? extends T> bean : beans) {
+            // preserve priority order
+            if (! map.containsKey(bean.getName()) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
+                final T instance = bean.get(this);
+                if (instance != null) {
+                    map.put(bean.getName(), instance);
+                }
+            }
+        }
+        return Map.copyOf(map);
+    }
+
+    /**
+     * Require a single bean with the given type.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @return the single bean (not {@code null})
+     * @param <T> the allowed bean type
+     * @throws NoSuchBeanException if the bean is not present
+     * @throws BeanInstantiationException if some error occurred when instantiating the bean
+     */
+    public <T> T requireBean(Class<T> type) {
+        return getBean(type, "", false, DependencyFilter.ACCEPT);
+    }
+
+    /**
+     * Require a single bean with the given type and name.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @return the single bean (not {@code null})
+     * @param <T> the allowed bean type
+     * @throws NoSuchBeanException if the bean is not present
+     * @throws BeanInstantiationException if some error occurred when instantiating the bean
+     */
+    public <T> T requireBean(Class<T> type, String name) {
+        return getBean(type, name, false, DependencyFilter.ACCEPT);
+    }
+
+    /**
+     * Get a single bean with the given type, if it exists and can be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @return the single bean, or {@code null} if it is not present
+     * @param <T> the allowed bean type
+     */
+    public <T> T getOptionalBean(Class<T> type) {
+        return getOptionalBean(type, "");
+    }
+
+    /**
+     * Get a single bean with the given type and name, if it exists and can be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @return the single bean, or {@code null} if it is not present
+     * @param <T> the allowed bean type
+     */
+    public <T> T getOptionalBean(Class<T> type, String name) {
+        return getOptionalBean(type, name, DependencyFilter.ACCEPT);
+    }
+
+    /**
+     * Get a single bean with the given type and name, if it exists and can be instantiated.
+     * The filter is applied to each bean to determine whether it should be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
+     * @return the single bean, or {@code null} if it is not present
+     * @param <T> the allowed bean type
+     */
+    public <T> T getOptionalBean(Class<T> type, String name, DependencyFilter filter) {
+        return getBean(type, name, true, filter);
+    }
+
+    /**
+     * Get a single bean with the given type and name, with configurable optionality.
+     * The filter is applied to each bean to determine whether it should be instantiated.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @param name the name of the bean which should be returned, or {@code ""} for any (must not be {@code null})
+     * @param optional {@code true} to return null if no bean matches, or {@code false} to throw an exception if no bean matches
+     * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
+     * @return the single bean, or {@code null} if it is not present
+     * @param <T> the allowed bean type
+     * @throws NoSuchBeanException if the bean is not present
+     */
     public <T> T getBean(final Class<T> type, final String name, final boolean optional, final DependencyFilter filter) {
         final List<Bean<? extends T>> beans = getBeansByType(type);
         List<Throwable> problems = null;
         for (Bean<? extends T> bean : beans) {
-            if (name.isEmpty() || bean.getName().equals(name)) {
-                try {
+            try {
+                if ((name.isEmpty() || bean.getName().equals(name)) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
                     final T instance = bean.get(this);
-                    if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
+                    if (instance != null) {
                         return instance;
                     }
-                } catch (Exception e) {
+                }
+            } catch (Exception e) {
+                if (! optional) {
                     if (problems == null) {
                         problems = new ArrayList<>();
                     }
@@ -161,41 +247,8 @@ public final class Scope {
         }
         final NoSuchBeanException nbe = new NoSuchBeanException(msgBuilder.toString());
         if (problems != null) {
-//            problems.forEach(nbe::addSuppressed);
+            problems.forEach(nbe::addSuppressed);
         }
         throw nbe;
-    }
-
-    public <T> Collection<T> getAllBeans(final Class<T> type, final String name, final DependencyFilter filter) {
-        final List<Bean<? extends T>> beans = getBeansByType(type);
-        if (beans.isEmpty()) {
-            return List.of();
-        }
-        final List<T> list = new ArrayList<>(beans.size());
-        for (Bean<? extends T> bean : beans) {
-            if (name.isEmpty() || bean.getName().equals(name)) {
-                final T instance = bean.get(this);
-                if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
-                    list.add(instance);
-                }
-            }
-        }
-        return List.copyOf(list);
-    }
-
-    public <T> Map<String, T> getAllBeansWithNames(final Class<T> type, final DependencyFilter filter) {
-        final List<Bean<? extends T>> beans = getBeansByType(type);
-        if (beans.isEmpty()) {
-            return Map.of();
-        }
-        final Map<String, T> map = new HashMap<>(beans.size());
-        for (Bean<? extends T> bean : beans) {
-            final T instance = bean.get(this);
-            if (instance != null && filter.test(instance.getClass(), bean.getName(), bean.getPriority())) {
-                // preserve priority order
-                map.putIfAbsent(bean.getName(), instance);
-            }
-        }
-        return Map.copyOf(map);
     }
 }

@@ -3,7 +3,7 @@ package io.github.dmlloyd.unnamed.container;
 import java.io.Serial;
 
 /**
- *
+ * An exception which indicates that a required bean is not present or resolvable in the scope.
  */
 public final class NoSuchBeanException extends BeanInstantiationException {
     @Serial

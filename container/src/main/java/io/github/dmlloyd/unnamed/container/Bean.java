@@ -25,6 +25,10 @@ final class Bean<T> implements BeanSupplier<T> {
         this.result = new Pending(definition.getBeanSupplier());
     }
 
+    Class<?> getType() {
+        return definition.getType();
+    }
+
     int getPriority() {
         return definition.getPriority();
     }

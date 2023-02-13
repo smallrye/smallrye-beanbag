@@ -3,7 +3,7 @@ package io.github.dmlloyd.unnamed.container;
 import java.io.Serial;
 
 /**
- *
+ * An exception indicating that a required bean failed to be instantiated.
  */
 public class BeanInstantiationException extends RuntimeException {
     @Serial

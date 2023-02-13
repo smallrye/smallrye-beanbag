@@ -1,11 +1,11 @@
 package io.github.dmlloyd.unnamed.container;
 
-import java.util.Collection;
+import java.util.List;
 
 /**
  * A supplier that resolves all bean from a scope.
  */
-final class AllBeansResolver<T> implements BeanSupplier<Collection<T>> {
+final class AllBeansResolver<T> implements BeanSupplier<List<T>> {
     private final Class<T> type;
     private final String name;
     private final DependencyFilter filter;
@@ -16,7 +16,7 @@ final class AllBeansResolver<T> implements BeanSupplier<Collection<T>> {
         this.filter = filter;
     }
 
-    public Collection<T> get(Scope scope) {
+    public List<T> get(Scope scope) {
         return scope.getAllBeans(type, name, filter);
     }
 }

@@ -3,7 +3,7 @@ package io.github.dmlloyd.unnamed.container;
 import java.io.Serial;
 
 /**
- *
+ * An exception indicating that a failure occurred specifically with injection.
  */
 public class InjectionException extends BeanInstantiationException {
     @Serial

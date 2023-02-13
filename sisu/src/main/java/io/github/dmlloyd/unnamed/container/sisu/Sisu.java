@@ -30,18 +30,30 @@ import javax.inject.Provider;
 import javax.inject.Singleton;
 
 import io.github.dmlloyd.unnamed.container.BeanSupplier;
-import io.github.dmlloyd.unnamed.container.Container;
+import io.github.dmlloyd.unnamed.container.BeanBag;
 import io.github.dmlloyd.unnamed.container.DependencyFilter;
+import io.smallrye.common.constraint.Assert;
 import org.eclipse.sisu.Nullable;
+import org.eclipse.sisu.Priority;
 import org.eclipse.sisu.Typed;
 
 /**
- *
+ * A utility which can configure a {@link BeanBag} using Eclipse SISU resources and annotations.
  */
 public final class Sisu {
     private Sisu() {}
 
-    public static void configureSisu(ClassLoader classLoader, Container.Builder builder, DependencyFilter filter) {
+    /**
+     * Perform the SISU configuration.
+     *
+     * @param classLoader the class loader to look in for SISU resources (must not be {@code null})
+     * @param builder the container builder to configure (must not be {@code null})
+     * @param filter a filter to apply to all SISU dependency resolutions (must not be {@code null})
+     */
+    public static void configureSisu(ClassLoader classLoader, BeanBag.Builder builder, DependencyFilter filter) {
+        Assert.checkNotNullParam("classLoader", classLoader);
+        Assert.checkNotNullParam("builder", builder);
+        Assert.checkNotNullParam("filter", filter);
         try {
             final Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
             while (e.hasMoreElements()) {
@@ -78,8 +90,8 @@ public final class Sisu {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addOne(Container.Builder builder, Class<T> clazz, final DependencyFilter filter) {
-        final Container.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
+    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter) {
+        final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
 
         final Named named = clazz.getAnnotation(Named.class);
         if (named != null) {
@@ -92,7 +104,16 @@ public final class Sisu {
         if (clazz.isAnnotationPresent(Singleton.class)) {
             beanBuilder.setSingleton(true);
         }
-        final Container.SupplierBuilder<T> supplierBuilder = beanBuilder.buildSupplier();
+        final Priority priority = clazz.getAnnotation(Priority.class);
+        if (priority != null) {
+            int pv = priority.value();
+            if (pv >= 0 && named != null && named.value().equals("default")) {
+                // shift ranking in a similar way to how SISU does it
+                pv += Integer.MIN_VALUE;
+            }
+            beanBuilder.setPriority(pv);
+        }
+        final BeanBag.SupplierBuilder<T> supplierBuilder = beanBuilder.buildSupplier();
         Constructor<T> ctor = findConstructor(clazz);
         for (Parameter parameter : ctor.getParameters()) {
             boolean optional = parameter.isAnnotationPresent(Nullable.class);
@@ -121,10 +142,7 @@ public final class Sisu {
         } else if (rawType == Set.class) {
             final Class<?> argType = getRawType(getTypeArgument(parameterizedType, 0));
             return BeanSupplier.resolvingAll(argType, name, filter).transform(Set::copyOf);
-        } else if (rawType == List.class) {
-            final Class<?> argType = getRawType(getTypeArgument(parameterizedType, 0));
-            return BeanSupplier.resolvingAll(argType, name, filter).transform(List::copyOf);
-        } else if (rawType == Collection.class) {
+        } else if (rawType == List.class || rawType == Collection.class) {
             final Class<?> argType = getRawType(getTypeArgument(parameterizedType, 0));
             return BeanSupplier.resolvingAll(argType, name, filter);
         } else if (rawType == Map.class) {
@@ -167,7 +185,7 @@ public final class Sisu {
         }
     }
 
-    private static <T> void addFieldInjections(final Class<? super T> clazz, final Container.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
+    private static <T> void addFieldInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
         if (clazz == Object.class) {
             return;
         }
@@ -192,12 +210,12 @@ public final class Sisu {
         }
     }
 
-    private static <T> void addMethodInjections(final Class<? super T> clazz, final Container.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
+    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
         addMethodInjections(clazz, supplierBuilder, filter, new HashSet<>());
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addMethodInjections(final Class<? super T> clazz, final Container.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter, final Set<Class<? super T>> visited) {
+    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter, final Set<Class<? super T>> visited) {
         if (visited.add(clazz)) {
             if (clazz == Object.class) {
                 return;

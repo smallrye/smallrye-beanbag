@@ -11,7 +11,7 @@ import io.smallrye.common.constraint.Assert;
  *
  * @param <C> the instance type
  */
-public interface Injector<C> {
+interface Injector<C> {
     void injectInto(Scope scope, C instance);
 
     static <C, T> Injector<C> forField(Field field, BeanSupplier<T> supplier) {

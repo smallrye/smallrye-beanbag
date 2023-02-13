@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import io.github.dmlloyd.unnamed.container.BeanInstantiationException;
-import io.github.dmlloyd.unnamed.container.Container;
+import io.github.dmlloyd.unnamed.container.BeanBag;
 import io.github.dmlloyd.unnamed.container.DependencyFilter;
 import io.github.dmlloyd.unnamed.container.sisu.Sisu;
 import io.smallrye.common.constraint.Assert;
@@ -56,10 +56,10 @@ import org.eclipse.aether.util.repository.SimpleArtifactDescriptorPolicy;
 public final class MavenFactory {
     private static final String MAVEN_CENTRAL = "https://repo1.maven.org/maven2";
 
-    private final Container container;
+    private final BeanBag container;
 
     private MavenFactory(final ClassLoader classLoader) {
-        final Container.Builder builder = Container.builder();
+        final BeanBag.Builder builder = BeanBag.builder();
         Sisu.configureSisu(classLoader, builder, DependencyFilter.ACCEPT);
         container = builder.build();
     }
@@ -94,7 +94,7 @@ public final class MavenFactory {
      * @throws BeanInstantiationException if there is some problem finding or creating the repository system instance
      */
     public RepositorySystem getRepositorySystem() throws BeanInstantiationException {
-        return container.requireBeanOfType(RepositorySystem.class);
+        return container.requireBean(RepositorySystem.class);
     }
 
     /**
