@@ -3,7 +3,7 @@ package io.smallrye.beanbag;
 import java.util.List;
 
 /**
- * A provider which injects things into fields after getting the instance from another provider.
+ * A provider which injects things into injectors after getting the instance from another provider.
  */
 final class InjectingSupplier<T> implements BeanSupplier<T> {
     private final BeanSupplier<T> instanceSupplier;
