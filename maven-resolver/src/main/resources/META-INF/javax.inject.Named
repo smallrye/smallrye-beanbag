@@ -1,2 +1,2 @@
-io.github.dmlloyd.maven.BasicWagonProvider
-io.github.dmlloyd.maven.BasicWagonConfigurator
+io.smallrye.beanbag.maven.BasicWagonProvider
+io.smallrye.beanbag.maven.BasicWagonConfigurator
