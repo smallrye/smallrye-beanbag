@@ -1,0 +1,31 @@
+name: SmallRye Build
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '.gitignore'
+      - 'README.adoc'
+  pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - 'README.adoc'
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    name: Build and test
+    steps:
+      - uses: actions/checkout@v2
+        name: checkout
+
+      - uses: AdoptOpenJDK/install-jdk@v1
+        name: set up JDK
+        with:
+          version: 17
+
+      - name: Build
+        shell: bash
+        run: |
+          mvn -B verify
