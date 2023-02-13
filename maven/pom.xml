@@ -6,16 +6,16 @@
 
     <parent>
         <groupId>io.smallrye.beanbag</groupId>
-        <artifactId>unnamed-container-parent</artifactId>
+        <artifactId>smallrye-beanbag-parent</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unnamed-container-maven-resolver</artifactId>
+    <artifactId>smallrye-beanbag-maven</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>unnamed-container-sisu</artifactId>
+            <artifactId>smallrye-beanbag-sisu</artifactId>
         </dependency>
 
         <dependency>
