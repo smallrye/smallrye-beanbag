@@ -1,0 +1,21 @@
+image:https://img.shields.io/github/license/smallrye/smallrye-config.svg["License", link="http://www.apache.org/licenses/LICENSE-2.0"]
+image:https://img.shields.io/maven-central/v/io.smallrye.beanbag/smallrye-beanbag-parent?color=green[["Central", link="https://search.maven.org/search?q=g:io.smallrye.beanbag"]
+
+= SmallRye BeanBag
+
+A simple programmatic bean container. Includes integration for Eclipse SISU as well as a Maven Resolver factory which uses it to wire a `RepositorySystem` instance.
+
+== Instructions
+
+=== Compile and test
+
+To compile and test the project:
+
+[source,bash]
+----
+mvn verify
+----
+
+=== Contributing
+
+Please refer to our Wiki for the https://github.com/smallrye/smallrye-parent/wiki[Contribution Guidelines].
