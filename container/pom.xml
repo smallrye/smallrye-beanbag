@@ -12,6 +12,9 @@
 
     <artifactId>smallrye-beanbag</artifactId>
 
+    <name>SmallRye BeanBag</name>
+    <description>A trivial programmatic bean container implementation</description>
+
     <dependencies>
         <dependency>
             <groupId>io.smallrye.common</groupId>

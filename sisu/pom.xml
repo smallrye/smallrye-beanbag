@@ -12,6 +12,9 @@
 
     <artifactId>smallrye-beanbag-sisu</artifactId>
 
+    <name>SmallRye BeanBag: SISU</name>
+    <description>Basic integration for SmallRye BeanBag and Eclipse SISU</description>
+
     <dependencies>
 
         <!-- Internal dependencies -->

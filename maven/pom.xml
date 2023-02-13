@@ -12,6 +12,9 @@
 
     <artifactId>smallrye-beanbag-maven</artifactId>
 
+    <name>SmallRye BeanBag: Maven</name>
+    <description>A supplier of Maven Resolver components using SmallRye BeanBag</description>
+
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
