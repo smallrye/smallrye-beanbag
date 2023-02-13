@@ -56,6 +56,7 @@ public final class Sisu {
         Assert.checkNotNullParam("filter", filter);
         try {
             final Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
+            final Set<Class<?>> visited = new HashSet<>();
             while (e.hasMoreElements()) {
                 final URL url = e.nextElement();
                 final URLConnection conn = url.openConnection();
@@ -78,7 +79,7 @@ public final class Sisu {
                                 } catch (ClassNotFoundException ex) {
                                     throw new RuntimeException("Could not load " + className);
                                 }
-                                addOne(builder, clazz, filter);
+                                addOne(builder, clazz, filter, visited);
                             }
                         }
                     }
@@ -90,7 +91,11 @@ public final class Sisu {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter) {
+    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter, final Set<Class<?>> visited) {
+        if (! visited.add(clazz)) {
+            // duplicate
+            return;
+        }
         final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
 
         final Named named = clazz.getAnnotation(Named.class);
