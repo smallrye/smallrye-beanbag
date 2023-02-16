@@ -1,12 +1,9 @@
 package io.smallrye.beanbag;
 
-import java.io.Serial;
-
 /**
  * An exception indicating that a required bean failed to be instantiated.
  */
 public class BeanInstantiationException extends RuntimeException {
-    @Serial
     private static final long serialVersionUID = 8313488012855336482L;
 
     /**

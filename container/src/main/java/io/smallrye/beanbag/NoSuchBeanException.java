@@ -1,12 +1,9 @@
 package io.smallrye.beanbag;
 
-import java.io.Serial;
-
 /**
  * An exception which indicates that a required bean is not present or resolvable in the scope.
  */
 public final class NoSuchBeanException extends BeanInstantiationException {
-    @Serial
     private static final long serialVersionUID = 8066269097967059891L;
 
     /**

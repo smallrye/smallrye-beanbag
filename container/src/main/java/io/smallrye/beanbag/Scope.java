@@ -20,7 +20,7 @@ public final class Scope {
     }
 
     static Scope of(final Scope parent, final List<BeanDefinition<?>> definitions) {
-        return new Scope(parent, Util.mapList(definitions, Bean::new));
+        return new Scope(parent, Util.mapList(definitions, Bean::new, Bean<?>[]::new));
     }
 
     @SuppressWarnings("unchecked")

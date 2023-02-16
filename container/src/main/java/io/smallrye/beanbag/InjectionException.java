@@ -1,12 +1,9 @@
 package io.smallrye.beanbag;
 
-import java.io.Serial;
-
 /**
  * An exception indicating that a failure occurred specifically with injection.
  */
 public class InjectionException extends BeanInstantiationException {
-    @Serial
     private static final long serialVersionUID = 4150858056742398287L;
 
     /**

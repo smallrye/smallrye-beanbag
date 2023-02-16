@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
@@ -196,7 +197,8 @@ public final class Sisu {
     }
 
     private static Type getTypeArgument(Type type, int position) {
-        if (type instanceof ParameterizedType pt) {
+        if (type instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) type;
             return pt.getActualTypeArguments()[position];
         } else {
             throw new IllegalArgumentException("No type argument given for " + type);
@@ -204,21 +206,37 @@ public final class Sisu {
     }
 
     private static Class<?> getRawType(Type type) {
-        if (type instanceof Class<?> clz) {
-            return clz;
-        } else if (type instanceof ParameterizedType pt) {
+        if (type instanceof Class<?>) {
+            return (Class<?>)type;
+        } else if (type instanceof ParameterizedType) {
+            ParameterizedType pt = (ParameterizedType) type;
             return getRawType(pt.getRawType());
-        } else if (type instanceof GenericArrayType gat) {
-            return getRawType(gat.getGenericComponentType()).arrayType();
-        } else if (type instanceof WildcardType wt) {
+        } else if (type instanceof GenericArrayType) {
+            GenericArrayType gat = (GenericArrayType) type;
+            // Class.arrayType() is JDK 12+
+            return getArrayType(getRawType(gat.getGenericComponentType()));
+        } else if (type instanceof WildcardType) {
+            WildcardType wt = (WildcardType) type;
             final Type[] ub = wt.getUpperBounds();
             return ub.length >= 1 ? getRawType(ub[0]) : Object.class;
-        } else if (type instanceof TypeVariable<?> tv) {
+        } else if (type instanceof TypeVariable<?>) {
+            TypeVariable<?> tv = (TypeVariable<?>) type;
             final Type[] bounds = tv.getBounds();
             return bounds.length >= 1 ? getRawType(bounds[0]) : Object.class;
         } else {
             throw new IllegalArgumentException("Cannot determine raw type of " + type);
         }
+    }
+
+    private static final ClassValue<Class<?>> arrayTypes = new ClassValue<Class<?>>() {
+        protected Class<?> computeValue(final Class<?> type) {
+            return Array.newInstance(type, 0).getClass();
+        }
+    };
+
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T[]> getArrayType(Class<T> elementType) {
+        return (Class<T[]>) arrayTypes.get(elementType);
     }
 
     private static <T> void addFieldInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
