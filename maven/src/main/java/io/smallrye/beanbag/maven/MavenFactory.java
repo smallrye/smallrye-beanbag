@@ -58,10 +58,36 @@ public final class MavenFactory {
 
     private final BeanBag container;
 
-    private MavenFactory(final ClassLoader classLoader) {
+    private MavenFactory(final ClassLoader classLoader, final Consumer<BeanBag.Builder> configurator, final DependencyFilter dependencyFilter) {
         final BeanBag.Builder builder = BeanBag.builder();
-        Sisu.configureSisu(classLoader, builder, DependencyFilter.ACCEPT);
+        configurator.accept(builder);
+        Sisu.configureSisu(classLoader, builder, dependencyFilter);
         container = builder.build();
+    }
+
+    /**
+     * Create a new factory.
+     * The given class loader instance is used to find the components of the Maven resolver.
+     *
+     * @param classLoader the class loader (must not be {@code null})
+     * @param configurator an additional configurator which can be used to modify the container configuration (must not be {@code null})
+     * @param dependencyFilter a filter which can be used to exclude certain implementations (must not be {@code null})
+     * @return the Maven factory instance (not {@code null})
+     */
+    public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator, DependencyFilter dependencyFilter) {
+        return new MavenFactory(Assert.checkNotNullParam("classLoader", classLoader), configurator, dependencyFilter);
+    }
+
+    /**
+     * Create a new factory.
+     * The given class loader instance is used to find the components of the Maven resolver.
+     *
+     * @param classLoader the class loader (must not be {@code null})
+     * @param configurator an additional configurator which can be used to modify the container configuration (must not be {@code null})
+     * @return the Maven factory instance (not {@code null})
+     */
+    public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator) {
+        return create(classLoader, configurator, DependencyFilter.ACCEPT);
     }
 
     /**
@@ -72,7 +98,7 @@ public final class MavenFactory {
      * @return the Maven factory instance (not {@code null})
      */
     public static MavenFactory create(ClassLoader classLoader) {
-        return new MavenFactory(Assert.checkNotNullParam("classLoader", classLoader));
+        return create(classLoader, ignored -> {});
     }
 
     private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
@@ -88,13 +114,22 @@ public final class MavenFactory {
     }
 
     /**
+     * Get the bean container used to set up the Maven environment.
+     *
+     * @return the container (not {@code null})
+     */
+    public BeanBag getContainer() {
+        return container;
+    }
+
+    /**
      * Locate the Maven repository system instance.
      *
      * @return the repository system instance (not {@code null})
      * @throws BeanInstantiationException if there is some problem finding or creating the repository system instance
      */
     public RepositorySystem getRepositorySystem() throws BeanInstantiationException {
-        return container.requireBean(RepositorySystem.class);
+        return getContainer().requireBean(RepositorySystem.class);
     }
 
     /**
