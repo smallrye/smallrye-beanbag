@@ -44,7 +44,7 @@
         <version.jsoup>1.15.3</version.jsoup>
         <version.org.junit.jupiter>5.9.2</version.org.junit.jupiter>
 
-        <version.sundrio>0.93.2</version.sundrio>
+        <version.sundrio>0.94.0</version.sundrio>
     </properties>
 
     <packaging>pom</packaging>
