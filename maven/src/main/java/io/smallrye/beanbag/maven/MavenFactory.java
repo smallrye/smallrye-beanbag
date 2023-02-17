@@ -114,13 +114,22 @@ public final class MavenFactory {
     }
 
     /**
+     * Get the bean container used to set up the Maven environment.
+     *
+     * @return the container (not {@code null})
+     */
+    public BeanBag getContainer() {
+        return container;
+    }
+
+    /**
      * Locate the Maven repository system instance.
      *
      * @return the repository system instance (not {@code null})
      * @throws BeanInstantiationException if there is some problem finding or creating the repository system instance
      */
     public RepositorySystem getRepositorySystem() throws BeanInstantiationException {
-        return container.requireBean(RepositorySystem.class);
+        return getContainer().requireBean(RepositorySystem.class);
     }
 
     /**
