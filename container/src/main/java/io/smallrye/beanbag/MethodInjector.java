@@ -20,12 +20,14 @@ final class MethodInjector<C, T> implements Injector<C> {
         try {
             value = supplier.get(scope);
         } catch (Throwable t) {
-            throw new InjectionException("Failed to acquire value from provider for method " + method.getDeclaringClass().getSimpleName() + "#" + method.getName() + " of object " + instance, t);
+            throw new InjectionException("Failed to acquire value from provider for method "
+                    + method.getDeclaringClass().getSimpleName() + "#" + method.getName() + " of object " + instance, t);
         }
         try {
             method.invoke(instance, value);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            throw new InjectionException("Failed to inject value " + value + " into method " + method.getDeclaringClass().getSimpleName() + "#" + method.getName() + " of object " + instance, e);
+            throw new InjectionException("Failed to inject value " + value + " into method "
+                    + method.getDeclaringClass().getSimpleName() + "#" + method.getName() + " of object " + instance, e);
         }
     }
 }

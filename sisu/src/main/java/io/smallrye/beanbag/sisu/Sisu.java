@@ -30,19 +30,21 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-import io.smallrye.beanbag.BeanSupplier;
-import io.smallrye.beanbag.BeanBag;
-import io.smallrye.beanbag.DependencyFilter;
-import io.smallrye.common.constraint.Assert;
 import org.eclipse.sisu.Nullable;
 import org.eclipse.sisu.Priority;
 import org.eclipse.sisu.Typed;
+
+import io.smallrye.beanbag.BeanBag;
+import io.smallrye.beanbag.BeanSupplier;
+import io.smallrye.beanbag.DependencyFilter;
+import io.smallrye.common.constraint.Assert;
 
 /**
  * A utility which can configure a {@link BeanBag} using Eclipse SISU resources and annotations.
  */
 public final class Sisu {
-    private Sisu() {}
+    private Sisu() {
+    }
 
     /**
      * Perform the SISU configuration.
@@ -92,8 +94,9 @@ public final class Sisu {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter, final Set<Class<?>> visited) {
-        if (! visited.add(clazz)) {
+    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter,
+            final Set<Class<?>> visited) {
+        if (!visited.add(clazz)) {
             // duplicate
             return;
         }
@@ -127,8 +130,7 @@ public final class Sisu {
             final String name = paramNamed == null ? "" : paramNamed.value();
             final Class<?> parameterType = parameter.getType();
             supplierBuilder.addConstructorArgument(
-                getSupplier(parameterType, parameter.getParameterizedType(), name, optional, filter)
-            );
+                    getSupplier(parameterType, parameter.getParameterizedType(), name, optional, filter));
         }
         supplierBuilder.setConstructor(ctor);
         // scan for injectable fields and methods
@@ -150,7 +152,8 @@ public final class Sisu {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T, P extends Provider<T>> void addOneProvider(BeanBag.Builder builder, Type genericInterface, Class<P> clazz, Named named, Priority priority) {
+    private static <T, P extends Provider<T>> void addOneProvider(BeanBag.Builder builder, Type genericInterface,
+            Class<P> clazz, Named named, Priority priority) {
         final Class<T> providedType = (Class<T>) getRawType(getTypeArgument(genericInterface, 0));
         final BeanBag.BeanBuilder<T> providedBuilder = builder.addBean(providedType);
         if (named != null) {
@@ -167,11 +170,13 @@ public final class Sisu {
             providedBuilder.setPriority(pv);
         }
         final String name = named == null ? "" : named.value();
-        providedBuilder.setSupplier(BeanSupplier.resolving(clazz, name, false, DependencyFilter.ACCEPT).transform(Provider::get));
+        providedBuilder
+                .setSupplier(BeanSupplier.resolving(clazz, name, false, DependencyFilter.ACCEPT).transform(Provider::get));
         providedBuilder.build();
     }
 
-    private static BeanSupplier<?> getSupplier(final Class<?> rawType, final Type parameterizedType, final String name, final boolean optional, final DependencyFilter filter) {
+    private static BeanSupplier<?> getSupplier(final Class<?> rawType, final Type parameterizedType, final String name,
+            final boolean optional, final DependencyFilter filter) {
         if (rawType == Provider.class) {
             final Type providerType = getTypeArgument(parameterizedType, 0);
             final BeanSupplier<?> supplier = getSupplier(getRawType(providerType), providerType, name, optional, filter);
@@ -207,7 +212,7 @@ public final class Sisu {
 
     private static Class<?> getRawType(Type type) {
         if (type instanceof Class<?>) {
-            return (Class<?>)type;
+            return (Class<?>) type;
         } else if (type instanceof ParameterizedType) {
             ParameterizedType pt = (ParameterizedType) type;
             return getRawType(pt.getRawType());
@@ -239,7 +244,8 @@ public final class Sisu {
         return (Class<T[]>) arrayTypes.get(elementType);
     }
 
-    private static <T> void addFieldInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
+    private static <T> void addFieldInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder,
+            final DependencyFilter filter) {
         if (clazz == Object.class) {
             return;
         }
@@ -252,7 +258,7 @@ public final class Sisu {
             if (Modifier.isStatic(mods) || Modifier.isFinal(mods)) {
                 continue;
             }
-            if (! field.isAnnotationPresent(Inject.class)) {
+            if (!field.isAnnotationPresent(Inject.class)) {
                 continue;
             }
             field.setAccessible(true);
@@ -264,12 +270,14 @@ public final class Sisu {
         }
     }
 
-    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter) {
+    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder,
+            final DependencyFilter filter) {
         addMethodInjections(clazz, supplierBuilder, filter, new HashSet<>());
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder, final DependencyFilter filter, final Set<Class<? super T>> visited) {
+    private static <T> void addMethodInjections(final Class<? super T> clazz, final BeanBag.SupplierBuilder<T> supplierBuilder,
+            final DependencyFilter filter, final Set<Class<? super T>> visited) {
         if (visited.add(clazz)) {
             if (clazz == Object.class) {
                 return;
@@ -286,7 +294,7 @@ public final class Sisu {
                 if (Modifier.isStatic(mods)) {
                     continue;
                 }
-                if (! method.isAnnotationPresent(Inject.class)) {
+                if (!method.isAnnotationPresent(Inject.class)) {
                     continue;
                 }
                 if (method.getParameterCount() != 1) {

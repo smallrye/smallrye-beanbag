@@ -10,7 +10,8 @@ import io.smallrye.common.constraint.Assert;
  * Shared utilities.
  */
 public final class Util {
-    private Util() {}
+    private Util() {
+    }
 
     /**
      * Efficiently create a copy of the input list with each list element being transformed by the given function.
@@ -27,10 +28,14 @@ public final class Util {
         Assert.checkNotNullParam("mapper", mapper);
         final int size = input.size();
         switch (size) {
-            case 0: return List.of();
-            case 1: return List.of(mapper.apply(input.get(0)));
-            case 2: return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)));
-            case 3: return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)), mapper.apply(input.get(2)));
+            case 0:
+                return List.of();
+            case 1:
+                return List.of(mapper.apply(input.get(0)));
+            case 2:
+                return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)));
+            case 3:
+                return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)), mapper.apply(input.get(2)));
             default: {
                 final R[] array = generator.apply(size);
                 for (int i = 0; i < size; i++) {

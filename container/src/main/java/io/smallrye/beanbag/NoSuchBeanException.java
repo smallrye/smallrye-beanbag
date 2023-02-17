@@ -7,14 +7,14 @@ public final class NoSuchBeanException extends BeanInstantiationException {
     private static final long serialVersionUID = 8066269097967059891L;
 
     /**
-     * Constructs a new {@code NoSuchBeanException} instance.  The message is left blank ({@code null}), and no
+     * Constructs a new {@code NoSuchBeanException} instance. The message is left blank ({@code null}), and no
      * cause is specified.
      */
     public NoSuchBeanException() {
     }
 
     /**
-     * Constructs a new {@code NoSuchBeanException} instance with an initial message.  No
+     * Constructs a new {@code NoSuchBeanException} instance with an initial message. No
      * cause is specified.
      *
      * @param msg the message
@@ -24,7 +24,7 @@ public final class NoSuchBeanException extends BeanInstantiationException {
     }
 
     /**
-     * Constructs a new {@code NoSuchBeanException} instance with an initial cause.  If
+     * Constructs a new {@code NoSuchBeanException} instance with an initial cause. If
      * a non-{@code null} cause is specified, its message is used to initialize the message of this
      * {@code NoSuchBeanException}; otherwise the message is left blank ({@code null}).
      *
@@ -37,7 +37,7 @@ public final class NoSuchBeanException extends BeanInstantiationException {
     /**
      * Constructs a new {@code NoSuchBeanException} instance with an initial message and cause.
      *
-     * @param msg   the message
+     * @param msg the message
      * @param cause the cause
      */
     public NoSuchBeanException(final String msg, final Throwable cause) {

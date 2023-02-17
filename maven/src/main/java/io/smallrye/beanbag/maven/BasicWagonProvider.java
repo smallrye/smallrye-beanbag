@@ -18,10 +18,14 @@ final class BasicWagonProvider implements WagonProvider {
 
     public Wagon lookup(final String roleHint) {
         switch (roleHint) {
-            case "http": return setAuthenticator(new LightweightHttpWagon());
-            case "https": return setAuthenticator(new LightweightHttpsWagon());
-            case "file": return new FileWagon();
-            default: throw new IllegalArgumentException();
+            case "http":
+                return setAuthenticator(new LightweightHttpWagon());
+            case "https":
+                return setAuthenticator(new LightweightHttpsWagon());
+            case "file":
+                return new FileWagon();
+            default:
+                throw new IllegalArgumentException();
         }
     }
 

@@ -12,7 +12,8 @@ final class BeanDefinition<T> {
     private final Set<Class<? super T>> restrictedTypes;
     private final BeanSupplier<T> supplier;
 
-    BeanDefinition(final String name, final int priority, final Class<T> type, final Set<Class<? super T>> restrictedTypes, final BeanSupplier<T> supplier) {
+    BeanDefinition(final String name, final int priority, final Class<T> type, final Set<Class<? super T>> restrictedTypes,
+            final BeanSupplier<T> supplier) {
         this.name = name;
         this.priority = priority;
         this.type = type;

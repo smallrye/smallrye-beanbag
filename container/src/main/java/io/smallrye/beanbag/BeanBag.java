@@ -36,7 +36,8 @@ public final class BeanBag {
 
     private <T> BeanDefinition<T> makeDefinition(final BeanBuilder<T> beanBuilder) {
         final String name = beanBuilder.name;
-        final Set<Class<? super T>> restrictedTypes = Set.copyOf(Objects.requireNonNullElse(beanBuilder.restrictedTypes, List.of()));
+        final Set<Class<? super T>> restrictedTypes = Set
+                .copyOf(Objects.requireNonNullElse(beanBuilder.restrictedTypes, List.of()));
         final BeanSupplier<T> supplier = beanBuilder.supplier;
         final int priority = beanBuilder.priority;
         final Class<T> type = beanBuilder.type;
@@ -54,13 +55,13 @@ public final class BeanBag {
     }
 
     /**
-     /**
-      * Get all constructable beans of the given type from a new resolution scope.
-      *
-      * @param type the allowed bean type class (must not be {@code null})
-      * @return the (possibly empty) list of all matching beans
-      * @param <T> the allowed bean type
-      */
+     * /**
+     * Get all constructable beans of the given type from a new resolution scope.
+     *
+     * @param type the allowed bean type class (must not be {@code null})
+     * @return the (possibly empty) list of all matching beans
+     * @param <T> the allowed bean type
+     */
     public <T> List<T> getAllBeans(final Class<T> type) {
         return newScope().getAllBeans(type);
     }
@@ -131,11 +132,13 @@ public final class BeanBag {
 
         private final List<BeanBuilder<?>> beanBuilders = new ArrayList<>();
 
-        Builder() {}
+        Builder() {
+        }
 
         /**
          * Add a new bean with the given type, returning a builder to configure it.
-         * The given type must be the concrete type of the bean <em>or</em> a class representing a supertype of that concrete type.
+         * The given type must be the concrete type of the bean <em>or</em> a class representing a supertype of that concrete
+         * type.
          *
          * @param type the bean type class (must not be {@code null})
          * @return the bean builder (not {@code null})
@@ -306,7 +309,8 @@ public final class BeanBag {
          * @return this builder (not {@code null})
          */
         public SupplierBuilder<T> injectField(Field field, BeanSupplier<?> supplier) {
-            getInjectorList().add(Injector.forField(Assert.checkNotNullParam("field", field), Assert.checkNotNullParam("supplier", supplier)));
+            getInjectorList().add(Injector.forField(Assert.checkNotNullParam("field", field),
+                    Assert.checkNotNullParam("supplier", supplier)));
             return this;
         }
 
@@ -320,16 +324,15 @@ public final class BeanBag {
          * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
          * @return this builder (not {@code null})
          */
-        public SupplierBuilder<T> injectField(Field field, Class<?> injectType, String beanName, boolean optional, DependencyFilter filter) {
+        public SupplierBuilder<T> injectField(Field field, Class<?> injectType, String beanName, boolean optional,
+                DependencyFilter filter) {
             return injectField(
-                field,
-                BeanSupplier.resolving(
-                    injectType,
-                    beanName,
-                    optional,
-                    filter
-                )
-            );
+                    field,
+                    BeanSupplier.resolving(
+                            injectType,
+                            beanName,
+                            optional,
+                            filter));
         }
 
         /**
@@ -416,16 +419,15 @@ public final class BeanBag {
          * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
          * @return this builder (not {@code null})
          */
-        public SupplierBuilder<T> injectMethod(Method method, Class<?> injectType, String beanName, boolean optional, DependencyFilter filter) {
+        public SupplierBuilder<T> injectMethod(Method method, Class<?> injectType, String beanName, boolean optional,
+                DependencyFilter filter) {
             return injectMethod(
-                method,
-                BeanSupplier.resolving(
-                    injectType,
-                    beanName,
-                    optional,
-                    filter
-                )
-            );
+                    method,
+                    BeanSupplier.resolving(
+                            injectType,
+                            beanName,
+                            optional,
+                            filter));
         }
 
         /**
@@ -488,7 +490,8 @@ public final class BeanBag {
          * @return this builder (not {@code null})
          */
         public SupplierBuilder<T> injectMethod(Method method, String beanName, boolean optional, DependencyFilter filter) {
-            return injectMethod(Assert.checkNotNullParam("method", method), method.getParameterTypes()[0], beanName, optional, filter);
+            return injectMethod(Assert.checkNotNullParam("method", method), method.getParameterTypes()[0], beanName, optional,
+                    filter);
         }
 
         /**
@@ -555,15 +558,14 @@ public final class BeanBag {
          * @param filter the filter to apply to determine whether a given bean should be included (must not be {@code null})
          * @return this builder (not {@code null})
          */
-        public SupplierBuilder<T> addConstructorArgument(Class<?> injectType, String beanName, boolean optional, DependencyFilter filter) {
+        public SupplierBuilder<T> addConstructorArgument(Class<?> injectType, String beanName, boolean optional,
+                DependencyFilter filter) {
             return addConstructorArgument(
-                BeanSupplier.resolving(
-                    injectType,
-                    beanName,
-                    optional,
-                    filter
-                )
-            );
+                    BeanSupplier.resolving(
+                            injectType,
+                            beanName,
+                            optional,
+                            filter));
         }
 
         /**
@@ -573,7 +575,8 @@ public final class BeanBag {
          * @return the enclosing bean builder (not {@code null})
          */
         public BeanBuilder<T> build() {
-            BeanSupplier<T> supplier = new ConstructorSupplier<>(Assert.checkNotNullParam("constructor", constructor), argumentSuppliers);
+            BeanSupplier<T> supplier = new ConstructorSupplier<>(Assert.checkNotNullParam("constructor", constructor),
+                    argumentSuppliers);
             final List<Injector<T>> injectors = this.injectors;
             if (injectors != null) {
                 supplier = new InjectingSupplier<>(supplier, List.copyOf(injectors));

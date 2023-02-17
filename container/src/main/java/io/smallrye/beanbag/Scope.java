@@ -42,7 +42,8 @@ public final class Scope {
             if (list.isEmpty()) {
                 list = List.of();
             }
-            final List<Bean<? extends T>> appearing = (List<Bean<? extends T>>) (List<?>) beansByType.putIfAbsent(type, (List<Bean<?>>) (List<?>) list);
+            final List<Bean<? extends T>> appearing = (List<Bean<? extends T>>) (List<?>) beansByType.putIfAbsent(type,
+                    (List<Bean<?>>) (List<?>) list);
             if (appearing != null) {
                 list = appearing;
             }
@@ -103,7 +104,8 @@ public final class Scope {
         }
         final List<T> list = new ArrayList<>(beans.size());
         for (Bean<? extends T> bean : beans) {
-            if ((name.isEmpty() || bean.getName().equals(name)) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
+            if ((name.isEmpty() || bean.getName().equals(name))
+                    && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
                 final T instance = bean.get(this);
                 if (instance != null) {
                     list.add(instance);
@@ -130,7 +132,7 @@ public final class Scope {
         final Map<String, T> map = new LinkedHashMap<>(beans.size());
         for (Bean<? extends T> bean : beans) {
             // preserve priority order
-            if (! map.containsKey(bean.getName()) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
+            if (!map.containsKey(bean.getName()) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
                 final T instance = bean.get(this);
                 if (instance != null) {
                     map.put(bean.getName(), instance);
@@ -221,14 +223,15 @@ public final class Scope {
         List<Throwable> problems = null;
         for (Bean<? extends T> bean : beans) {
             try {
-                if ((name.isEmpty() || bean.getName().equals(name)) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
+                if ((name.isEmpty() || bean.getName().equals(name))
+                        && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
                     final T instance = bean.get(this);
                     if (instance != null) {
                         return instance;
                     }
                 }
             } catch (Exception e) {
-                if (! optional) {
+                if (!optional) {
                     if (problems == null) {
                         problems = new ArrayList<>();
                     }
@@ -241,7 +244,7 @@ public final class Scope {
         }
         StringBuilder msgBuilder = new StringBuilder("No matching bean available: type is ");
         msgBuilder.append(type);
-        if (! name.isEmpty()) {
+        if (!name.isEmpty()) {
             msgBuilder.append(", name is \"").append(name).append('"');
         }
         final NoSuchBeanException nbe = new NoSuchBeanException(msgBuilder.toString());

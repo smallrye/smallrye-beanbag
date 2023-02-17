@@ -6,11 +6,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import io.smallrye.beanbag.BeanInstantiationException;
-import io.smallrye.beanbag.BeanBag;
-import io.smallrye.beanbag.DependencyFilter;
-import io.smallrye.beanbag.sisu.Sisu;
-import io.smallrye.common.constraint.Assert;
 import org.apache.maven.settings.Mirror;
 import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
@@ -50,6 +45,12 @@ import org.eclipse.aether.util.repository.DefaultMirrorSelector;
 import org.eclipse.aether.util.repository.DefaultProxySelector;
 import org.eclipse.aether.util.repository.SimpleArtifactDescriptorPolicy;
 
+import io.smallrye.beanbag.BeanBag;
+import io.smallrye.beanbag.BeanInstantiationException;
+import io.smallrye.beanbag.DependencyFilter;
+import io.smallrye.beanbag.sisu.Sisu;
+import io.smallrye.common.constraint.Assert;
+
 /**
  * A factory for objects that are useful for resolving dependencies via Maven.
  */
@@ -58,7 +59,8 @@ public final class MavenFactory {
 
     private final BeanBag container;
 
-    private MavenFactory(final ClassLoader classLoader, final Consumer<BeanBag.Builder> configurator, final DependencyFilter dependencyFilter) {
+    private MavenFactory(final ClassLoader classLoader, final Consumer<BeanBag.Builder> configurator,
+            final DependencyFilter dependencyFilter) {
         final BeanBag.Builder builder = BeanBag.builder();
         configurator.accept(builder);
         Sisu.configureSisu(classLoader, builder, dependencyFilter);
@@ -70,11 +72,13 @@ public final class MavenFactory {
      * The given class loader instance is used to find the components of the Maven resolver.
      *
      * @param classLoader the class loader (must not be {@code null})
-     * @param configurator an additional configurator which can be used to modify the container configuration (must not be {@code null})
+     * @param configurator an additional configurator which can be used to modify the container configuration (must not be
+     *        {@code null})
      * @param dependencyFilter a filter which can be used to exclude certain implementations (must not be {@code null})
      * @return the Maven factory instance (not {@code null})
      */
-    public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator, DependencyFilter dependencyFilter) {
+    public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator,
+            DependencyFilter dependencyFilter) {
         return new MavenFactory(Assert.checkNotNullParam("classLoader", classLoader), configurator, dependencyFilter);
     }
 
@@ -83,7 +87,8 @@ public final class MavenFactory {
      * The given class loader instance is used to find the components of the Maven resolver.
      *
      * @param classLoader the class loader (must not be {@code null})
-     * @param configurator an additional configurator which can be used to modify the container configuration (must not be {@code null})
+     * @param configurator an additional configurator which can be used to modify the container configuration (must not be
+     *        {@code null})
      * @return the Maven factory instance (not {@code null})
      */
     public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator) {
@@ -98,7 +103,8 @@ public final class MavenFactory {
      * @return the Maven factory instance (not {@code null})
      */
     public static MavenFactory create(ClassLoader classLoader) {
-        return create(classLoader, ignored -> {});
+        return create(classLoader, ignored -> {
+        });
     }
 
     private static final StackWalker WALKER = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
@@ -141,7 +147,8 @@ public final class MavenFactory {
      * @return the settings (not {@code null})
      * @throws SettingsBuildingException if creating the settings has failed
      */
-    public static Settings createSettings(File globalSettings, File userSettings, Consumer<SettingsProblem> problemHandler) throws SettingsBuildingException {
+    public static Settings createSettings(File globalSettings, File userSettings, Consumer<SettingsProblem> problemHandler)
+            throws SettingsBuildingException {
         SettingsBuildingRequest request = new DefaultSettingsBuildingRequest();
         if (globalSettings != null) {
             request.setGlobalSettingsFile(globalSettings);
@@ -159,7 +166,8 @@ public final class MavenFactory {
         Settings settings = result.getEffectiveSettings();
         // now apply some defaults...
         if (settings.getLocalRepository() == null) {
-            settings.setLocalRepository(System.getProperty("user.home", "") + File.separator + ".m2" + File.separator + "repository");
+            settings.setLocalRepository(
+                    System.getProperty("user.home", "") + File.separator + ".m2" + File.separator + "repository");
         }
         return settings;
     }
@@ -178,13 +186,15 @@ public final class MavenFactory {
         // offline = "simple"
         // normal = "enhanced"
         String repositoryType = "default";
-        session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, new LocalRepository(new File(settings.getLocalRepository()), repositoryType)));
+        session.setLocalRepositoryManager(system.newLocalRepositoryManager(session,
+                new LocalRepository(new File(settings.getLocalRepository()), repositoryType)));
         // todo: workspace reader, transfer listener, repo listener
         session.setOffline(settings.isOffline());
 
         DefaultMirrorSelector mirrorSelector = new DefaultMirrorSelector();
         for (Mirror mirror : settings.getMirrors()) {
-            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, false, mirror.getMirrorOf(), mirror.getMirrorOfLayouts());
+            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, false, mirror.getMirrorOf(),
+                    mirror.getMirrorOfLayouts());
         }
         session.setMirrorSelector(mirrorSelector);
 
@@ -199,14 +209,12 @@ public final class MavenFactory {
         session.setDependencyTraverser(new FatArtifactTraverser());
 
         DependencyGraphTransformer dependencyGraphTransformer = new ChainedDependencyGraphTransformer(
-            new ConflictResolver(
-                new NearestVersionSelector(),
-                new JavaScopeSelector(),
-                new SimpleOptionalitySelector(),
-                new JavaScopeDeriver()
-            ),
-            new JavaDependencyContextRefiner()
-        );
+                new ConflictResolver(
+                        new NearestVersionSelector(),
+                        new JavaScopeSelector(),
+                        new SimpleOptionalitySelector(),
+                        new JavaScopeDeriver()),
+                new JavaDependencyContextRefiner());
         session.setDependencyGraphTransformer(dependencyGraphTransformer);
 
         DefaultArtifactTypeRegistry artifactTypeRegistry = new DefaultArtifactTypeRegistry();
@@ -228,9 +236,8 @@ public final class MavenFactory {
         session.setConfigProperties(System.getProperties());
 
         session.setDependencySelector(new AndDependencySelector(
-            new ScopeDependencySelector(Set.of(JavaScopes.RUNTIME, JavaScopes.COMPILE), Set.of()),
-            new OptionalDependencySelector()
-        ));
+                new ScopeDependencySelector(Set.of(JavaScopes.RUNTIME, JavaScopes.COMPILE), Set.of()),
+                new OptionalDependencySelector()));
 
         return session;
     }
@@ -244,7 +251,7 @@ public final class MavenFactory {
     public static List<RemoteRepository> createRemoteRepositoryList(final Settings settings) {
         Assert.checkNotNullParam("settings", settings);
         List<RemoteRepository> basicList;
-        if (! settings.isOffline()) {
+        if (!settings.isOffline()) {
             RemoteRepository.Builder builder = new RemoteRepository.Builder("central", "default", MAVEN_CENTRAL);
             builder.setSnapshotPolicy(new RepositoryPolicy(false, null, null));
             RemoteRepository remoteRepository = builder.build();
@@ -254,7 +261,8 @@ public final class MavenFactory {
         }
         DefaultMirrorSelector mirrorSelector = new DefaultMirrorSelector();
         for (Mirror mirror : settings.getMirrors()) {
-            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.getMirrorOf(), mirror.getMirrorOfLayouts());
+            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.getMirrorOf(),
+                    mirror.getMirrorOfLayouts());
         }
         Set<RemoteRepository> mirroredRepos = new LinkedHashSet<RemoteRepository>();
         for (RemoteRepository repository : basicList) {
@@ -303,7 +311,7 @@ public final class MavenFactory {
         final Authentication authentication;
         if (proxy.getUsername() != null || proxy.getPassword() != null) {
             authentication = new AuthenticationBuilder().addUsername(proxy.getUsername())
-                .addPassword(proxy.getPassword()).build();
+                    .addPassword(proxy.getPassword()).build();
         } else {
             authentication = null;
         }

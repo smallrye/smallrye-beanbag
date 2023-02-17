@@ -19,12 +19,14 @@ final class FieldInjector<C, T> implements Injector<C> {
         try {
             value = supplier.get(scope);
         } catch (Throwable t) {
-            throw new InjectionException("Failed to acquire value from provider for field " + field.getDeclaringClass().getSimpleName() + "#" + field.getName() + " of object " + instance, t);
+            throw new InjectionException("Failed to acquire value from provider for field "
+                    + field.getDeclaringClass().getSimpleName() + "#" + field.getName() + " of object " + instance, t);
         }
         try {
             field.set(instance, value);
         } catch (IllegalAccessException e) {
-            throw new InjectionException("Failed to inject value " + value + " into field " + field.getDeclaringClass().getSimpleName() + "#" + field.getName() + " of object " + instance, e);
+            throw new InjectionException("Failed to inject value " + value + " into field "
+                    + field.getDeclaringClass().getSimpleName() + "#" + field.getName() + " of object " + instance, e);
         }
     }
 }

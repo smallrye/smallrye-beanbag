@@ -32,7 +32,8 @@ interface Injector<C> {
         Assert.checkNotNullParam("supplier", supplier);
         final int mods = method.getModifiers();
         if (Modifier.isStatic(mods)) {
-            throw new IllegalArgumentException("Cannot inject into static method " + method.getDeclaringClass().getSimpleName());
+            throw new IllegalArgumentException(
+                    "Cannot inject into static method " + method.getDeclaringClass().getSimpleName());
         }
         if (method.getParameterCount() != 1) {
             throw new IllegalArgumentException("Cannot inject into method with more than one argument");

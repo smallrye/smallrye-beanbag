@@ -9,7 +9,7 @@ import java.util.Set;
  * @param <T> the bean type (which is usually, but not always, the concrete type of the instance)
  */
 final class Bean<T> implements BeanSupplier<T> {
-    private static final Comparator<Bean<?>> BY_PRIORITY = Comparator.<Bean<?>>comparingInt(Bean::getPriority).reversed();
+    private static final Comparator<Bean<?>> BY_PRIORITY = Comparator.<Bean<?>> comparingInt(Bean::getPriority).reversed();
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     static <T> Comparator<Bean<? extends T>> byPriority() {
@@ -43,7 +43,7 @@ final class Bean<T> implements BeanSupplier<T> {
 
     boolean matchesByType(final Class<?> type) {
         final Set<Class<? super T>> restrictedTypes = definition.getRestrictedTypes();
-        if (! type.isAssignableFrom(definition.getType())) {
+        if (!type.isAssignableFrom(definition.getType())) {
             // cannot be assigned
             return false;
         }
@@ -100,7 +100,7 @@ final class Bean<T> implements BeanSupplier<T> {
         return (Result<T>) MISSING;
     }
 
-    /*non-static*/ final class Pending extends Result<T> {
+    /* non-static */ final class Pending extends Result<T> {
         private final BeanSupplier<T> provider;
 
         Pending(final BeanSupplier<T> provider) {

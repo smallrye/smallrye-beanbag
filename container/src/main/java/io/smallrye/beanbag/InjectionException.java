@@ -7,14 +7,14 @@ public class InjectionException extends BeanInstantiationException {
     private static final long serialVersionUID = 4150858056742398287L;
 
     /**
-     * Constructs a new {@code InjectionException} instance.  The message is left blank ({@code null}), and no
+     * Constructs a new {@code InjectionException} instance. The message is left blank ({@code null}), and no
      * cause is specified.
      */
     public InjectionException() {
     }
 
     /**
-     * Constructs a new {@code InjectionException} instance with an initial message.  No
+     * Constructs a new {@code InjectionException} instance with an initial message. No
      * cause is specified.
      *
      * @param msg the message
@@ -24,7 +24,7 @@ public class InjectionException extends BeanInstantiationException {
     }
 
     /**
-     * Constructs a new {@code InjectionException} instance with an initial cause.  If
+     * Constructs a new {@code InjectionException} instance with an initial cause. If
      * a non-{@code null} cause is specified, its message is used to initialize the message of this
      * {@code InjectionException}; otherwise the message is left blank ({@code null}).
      *
@@ -37,7 +37,7 @@ public class InjectionException extends BeanInstantiationException {
     /**
      * Constructs a new {@code InjectionException} instance with an initial message and cause.
      *
-     * @param msg   the message
+     * @param msg the message
      * @param cause the cause
      */
     public InjectionException(final String msg, final Throwable cause) {

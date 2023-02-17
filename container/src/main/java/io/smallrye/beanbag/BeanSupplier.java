@@ -52,7 +52,8 @@ public interface BeanSupplier<T> {
      * @return the supplier (not {@code null})
      * @param <T> the bean type
      */
-    static <T> BeanSupplier<T> resolving(final Class<T> type, final String name, final boolean optional, final DependencyFilter filter) {
+    static <T> BeanSupplier<T> resolving(final Class<T> type, final String name, final boolean optional,
+            final DependencyFilter filter) {
         Assert.checkNotNullParam("type", type);
         Assert.checkNotNullParam("name", name);
         Assert.checkNotNullParam("filter", filter);

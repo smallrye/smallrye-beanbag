@@ -26,7 +26,8 @@ final class ConstructorSupplier<T> implements BeanSupplier<T> {
             try {
                 arguments[i] = argumentSuppliers.get(i).get(scope);
             } catch (Exception ex) {
-                throw new BeanInstantiationException("Failed to inject argument " + i + " of constructor for " + constructor.getDeclaringClass(), ex);
+                throw new BeanInstantiationException(
+                        "Failed to inject argument " + i + " of constructor for " + constructor.getDeclaringClass(), ex);
             }
         }
         try {
