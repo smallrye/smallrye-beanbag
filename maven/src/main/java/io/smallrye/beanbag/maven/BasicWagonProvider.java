@@ -3,6 +3,7 @@ package io.smallrye.beanbag.maven;
 import java.lang.reflect.Field;
 
 import javax.inject.Named;
+import javax.inject.Singleton;
 
 import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.providers.file.FileWagon;
@@ -11,7 +12,8 @@ import org.apache.maven.wagon.providers.http.LightweightHttpWagonAuthenticator;
 import org.apache.maven.wagon.providers.http.LightweightHttpsWagon;
 import org.eclipse.aether.transport.wagon.WagonProvider;
 
-@Named
+@Named("basic")
+@Singleton
 final class BasicWagonProvider implements WagonProvider {
     BasicWagonProvider() {
     }
