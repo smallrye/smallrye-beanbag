@@ -11,16 +11,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class Scope {
     private final Scope parent;
+    private final Scope resolutionScope;
     private final List<Bean<?>> beans;
     private final Map<Class<?>, List<Bean<?>>> beansByType = new ConcurrentHashMap<>();
 
-    Scope(final Scope parent, final List<Bean<?>> beans) {
+    Scope(final Scope parent, final ScopeDefinition resolutionScope, final ScopeDefinition definition) {
         this.parent = parent;
-        this.beans = beans;
-    }
-
-    static Scope of(final Scope parent, final List<BeanDefinition<?>> definitions) {
-        return new Scope(parent, Util.mapList(definitions, Bean::new, Bean<?>[]::new));
+        if (resolutionScope == null) {
+            this.resolutionScope = this;
+        } else {
+            this.resolutionScope = new Scope(this, null, resolutionScope);
+        }
+        this.beans = Util.mapList(definition.getBeanDefinitions(), Bean::new, Bean[]::new);
     }
 
     @SuppressWarnings("unchecked")
@@ -106,7 +108,7 @@ public final class Scope {
         for (Bean<? extends T> bean : beans) {
             if ((name.isEmpty() || bean.getName().equals(name))
                     && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
-                final T instance = bean.get(this);
+                final T instance = bean.get(resolutionScope);
                 if (instance != null) {
                     list.add(instance);
                 }
@@ -133,7 +135,7 @@ public final class Scope {
         for (Bean<? extends T> bean : beans) {
             // preserve priority order
             if (!map.containsKey(bean.getName()) && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
-                final T instance = bean.get(this);
+                final T instance = bean.get(resolutionScope);
                 if (instance != null) {
                     map.put(bean.getName(), instance);
                 }
@@ -225,7 +227,7 @@ public final class Scope {
             try {
                 if ((name.isEmpty() || bean.getName().equals(name))
                         && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
-                    final T instance = bean.get(this);
+                    final T instance = bean.get(resolutionScope);
                     if (instance != null) {
                         return instance;
                     }
