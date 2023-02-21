@@ -151,6 +151,19 @@ public final class BeanBag {
         }
 
         /**
+         * Add a new bean which resolves to the given instance.
+         *
+         * @param bean the bean instance (must not be {@code null})
+         * @return the bean builder (not {@code null})
+         * @param <T> the bean type
+         */
+        @SuppressWarnings("unchecked")
+        public <T> Builder addBeanInstance(final T bean) {
+            Assert.checkNotNullParam("bean", bean);
+            return addBean((Class<T>) bean.getClass()).setInstance(bean).build();
+        }
+
+        /**
          * Build a new container instance with the beans that were previously configured in this builder.
          *
          * @return the new container (not {@code null})
@@ -214,6 +227,21 @@ public final class BeanBag {
         public BeanBuilder<T> setSupplier(final BeanSupplier<T> supplier) {
             Assert.checkNotNullParam("supplier", supplier);
             this.supplier = supplier;
+            return this;
+        }
+
+        /**
+         * Set the supplier for this bean to a literal instance.
+         * Setting a supplier will overwrite a supplier created via {@link #buildSupplier()} (if any).
+         * The bean will be marked as a singleton.
+         *
+         * @param instance the bean instance (must not be {@code null})
+         * @return this builder (not {@code null})
+         */
+        public BeanBuilder<T> setInstance(final T instance) {
+            Assert.checkNotNullParam("instance", instance);
+            this.supplier = scope -> instance;
+            singleton = true;
             return this;
         }
 

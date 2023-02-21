@@ -108,9 +108,13 @@ public final class Scope {
         for (Bean<? extends T> bean : beans) {
             if ((name.isEmpty() || bean.getName().equals(name))
                     && filter.test(bean.getType(), bean.getName(), bean.getPriority())) {
-                final T instance = bean.get(resolutionScope);
-                if (instance != null) {
-                    list.add(instance);
+                try {
+                    final T instance = bean.get(resolutionScope);
+                    if (instance != null) {
+                        list.add(instance);
+                    }
+                } catch (Exception ignored) {
+                    // do not include it
                 }
             }
         }
