@@ -59,12 +59,29 @@ public final class MavenFactory {
 
     private final BeanBag container;
 
-    private MavenFactory(final ClassLoader classLoader, final Consumer<BeanBag.Builder> configurator,
+    private MavenFactory(final List<ClassLoader> classLoaders, final Consumer<BeanBag.Builder> configurator,
             final DependencyFilter dependencyFilter) {
         final BeanBag.Builder builder = BeanBag.builder();
         configurator.accept(builder);
-        Sisu.configureSisu(classLoader, builder, dependencyFilter);
+        for (ClassLoader classLoader : classLoaders) {
+            Sisu.configureSisu(classLoader, builder, dependencyFilter);
+        }
         container = builder.build();
+    }
+
+    /**
+     * Create a new factory.
+     * The given class loader instances are used to find the components of the Maven resolver.
+     *
+     * @param classLoaders the class loaders to search (must not be {@code null})
+     * @param configurator an additional configurator which can be used to modify the container configuration (must not be
+     *        {@code null})
+     * @param dependencyFilter a filter which can be used to exclude certain implementations (must not be {@code null})
+     * @return the Maven factory instance (not {@code null})
+     */
+    public static MavenFactory create(List<ClassLoader> classLoaders, Consumer<BeanBag.Builder> configurator,
+            DependencyFilter dependencyFilter) {
+        return new MavenFactory(Assert.checkNotNullParam("classLoaders", classLoaders), configurator, dependencyFilter);
     }
 
     /**
@@ -79,7 +96,7 @@ public final class MavenFactory {
      */
     public static MavenFactory create(ClassLoader classLoader, Consumer<BeanBag.Builder> configurator,
             DependencyFilter dependencyFilter) {
-        return new MavenFactory(Assert.checkNotNullParam("classLoader", classLoader), configurator, dependencyFilter);
+        return create(List.of(Assert.checkNotNullParam("classLoader", classLoader)), configurator, dependencyFilter);
     }
 
     /**
