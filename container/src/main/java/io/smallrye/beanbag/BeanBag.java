@@ -55,7 +55,6 @@ public final class BeanBag {
     }
 
     /**
-     * /**
      * Get all constructable beans of the given type from a new resolution scope.
      *
      * @param type the allowed bean type class (must not be {@code null})
