@@ -4,10 +4,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
@@ -24,15 +27,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
-import javax.inject.Inject;
-import javax.inject.Named;
 import javax.inject.Provider;
-import javax.inject.Singleton;
-
-import org.eclipse.sisu.Nullable;
-import org.eclipse.sisu.Priority;
-import org.eclipse.sisu.Typed;
 
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.BeanSupplier;
@@ -111,23 +108,23 @@ public final class Sisu {
             return;
         }
         final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
+        final Annotations clazzAnnotations = Annotations.of(clazz);
 
-        final Named named = clazz.getAnnotation(Named.class);
+        final String named = clazzAnnotations.getNamed();
         if (named != null) {
-            beanBuilder.setName(named.value());
+            beanBuilder.setName(named);
         }
-        final Typed typed = clazz.getAnnotation(Typed.class);
+        final List<Class<?>> typed = clazzAnnotations.getTyped();
         if (typed != null) {
             //noinspection RedundantCast
-            beanBuilder.addRestrictedTypes((List<Class<? super T>>) (List<?>) List.of(typed.value()));
+            beanBuilder.addRestrictedTypes((List<Class<? super T>>) (List<?>) typed);
         }
-        if (clazz.isAnnotationPresent(Singleton.class)) {
+        if (clazzAnnotations.isSingleton()) {
             beanBuilder.setSingleton(true);
         }
-        final Priority priority = clazz.getAnnotation(Priority.class);
-        if (priority != null) {
-            int pv = priority.value();
-            if (pv >= 0 && named != null && named.value().equals("default")) {
+        if (clazzAnnotations.hasPriority()) {
+            int pv = clazzAnnotations.getPriority();
+            if (pv >= 0 && named != null && named.equals("default")) {
                 // shift ranking in a similar way to how SISU does it
                 pv += Integer.MIN_VALUE;
             }
@@ -136,9 +133,10 @@ public final class Sisu {
         final BeanBag.SupplierBuilder<T> supplierBuilder = beanBuilder.buildSupplier();
         Constructor<T> ctor = findConstructor(clazz);
         for (Parameter parameter : ctor.getParameters()) {
-            boolean optional = parameter.isAnnotationPresent(Nullable.class);
-            final Named paramNamed = parameter.getAnnotation(Named.class);
-            final String name = paramNamed == null ? "" : paramNamed.value();
+            Annotations paramAnnotations = Annotations.of(parameter);
+            final boolean optional = paramAnnotations.isNullable();
+            final String paramNamed = paramAnnotations.getNamed();
+            final String name = paramNamed == null ? "" : paramNamed;
             final Class<?> parameterType = parameter.getType();
             supplierBuilder.addConstructorArgument(
                     getSupplier(parameterType, parameter.getParameterizedType(), name, optional, filter));
@@ -157,7 +155,7 @@ public final class Sisu {
         for (Type genericInterface : clazz.getGenericInterfaces()) {
             if (getRawType(genericInterface) == Provider.class) {
                 // it's a provider for something
-                addOneProvider(builder, genericInterface, clazz.asSubclass(Provider.class), named, priority);
+                addOneProvider(builder, genericInterface, clazz.asSubclass(Provider.class), clazzAnnotations);
             }
         }
     }
@@ -186,23 +184,24 @@ public final class Sisu {
 
     @SuppressWarnings("unchecked")
     private static <T, P extends Provider<T>> void addOneProvider(BeanBag.Builder builder, Type genericInterface,
-            Class<P> clazz, Named named, Priority priority) {
+            Class<P> clazz, Annotations clazzAnnotations) {
         final Class<T> providedType = (Class<T>) getRawType(getTypeArgument(genericInterface, 0));
         final BeanBag.BeanBuilder<T> providedBuilder = builder.addBean(providedType);
+        final String named = clazzAnnotations.getNamed();
         if (named != null) {
             // replicate name from provider bean
-            providedBuilder.setName(named.value());
+            providedBuilder.setName(named);
         }
-        if (priority != null) {
+        if (clazzAnnotations.hasPriority()) {
             // replicate priority from provider bean
-            int pv = priority.value();
-            if (pv >= 0 && named != null && named.value().equals("default")) {
+            int pv = clazzAnnotations.getPriority();
+            if (pv >= 0 && named != null && named.equals("default")) {
                 // shift ranking in a similar way to how SISU does it
                 pv += Integer.MIN_VALUE;
             }
             providedBuilder.setPriority(pv);
         }
-        final String name = named == null ? "" : named.value();
+        final String name = named == null ? "" : named;
         providedBuilder
                 .setSupplier(BeanSupplier.resolving(clazz, name, false, DependencyFilter.ACCEPT).transform(Provider::get));
         providedBuilder.build();
@@ -291,13 +290,14 @@ public final class Sisu {
             if (Modifier.isStatic(mods) || Modifier.isFinal(mods)) {
                 continue;
             }
-            if (!field.isAnnotationPresent(Inject.class)) {
+            final Annotations fieldAnnotations = Annotations.of(field);
+            if (!fieldAnnotations.isInject()) {
                 continue;
             }
             field.setAccessible(true);
-            boolean optional = field.isAnnotationPresent(Nullable.class);
-            final Named paramNamed = field.getAnnotation(Named.class);
-            final String name = paramNamed == null ? "" : paramNamed.value();
+            boolean optional = fieldAnnotations.isNullable();
+            final String paramNamed = fieldAnnotations.getNamed();
+            final String name = paramNamed == null ? "" : paramNamed;
             final Class<?> fieldType = field.getType();
             supplierBuilder.injectField(field, getSupplier(fieldType, field.getGenericType(), name, optional, filter));
         }
@@ -327,16 +327,17 @@ public final class Sisu {
                 if (Modifier.isStatic(mods)) {
                     continue;
                 }
-                if (!method.isAnnotationPresent(Inject.class)) {
+                final Annotations methodAnnotations = Annotations.of(method);
+                if (!methodAnnotations.isInject()) {
                     continue;
                 }
                 if (method.getParameterCount() != 1) {
                     continue;
                 }
-                final Named named = method.getAnnotation(Named.class);
-                final String name = named == null ? "" : named.value();
+                final String named = methodAnnotations.getNamed();
+                final String name = named == null ? "" : named;
                 final Parameter argParam = method.getParameters()[0];
-                boolean optional = argParam.isAnnotationPresent(Nullable.class);
+                boolean optional = Annotations.of(argParam).isNullable();
                 supplierBuilder.injectMethod(method, argParam.getType(), name, optional, filter);
             }
         }
@@ -353,7 +354,7 @@ public final class Sisu {
             throw new RuntimeException("Cannot get declared constructors from " + clazz, t);
         }
         for (Constructor<?> constructor : declaredConstructors) {
-            if (constructor.isAnnotationPresent(Inject.class)) {
+            if (Annotations.of(constructor).isInject()) {
                 constructor.setAccessible(true);
                 return (Constructor<T>) constructor;
             } else if (constructor.getParameterCount() == 0) {
@@ -365,5 +366,138 @@ public final class Sisu {
             return defaultConstructor;
         }
         throw new RuntimeException("No valid constructor found on " + clazz);
+    }
+
+    private static final ClassValue<Function<Annotation, String>> GET_NAMED_VALUE_FN = new ClassValue<Function<Annotation, String>>() {
+        protected Function<Annotation, String> computeValue(final Class<?> type) {
+            return new MethodFunction<>(type, "javax.inject.Named");
+        }
+    };
+
+    private static final ClassValue<Function<Annotation, Integer>> GET_PRIORITY_VALUE_FN = new ClassValue<Function<Annotation, Integer>>() {
+        protected Function<Annotation, Integer> computeValue(final Class<?> type) {
+            return new MethodFunction<>(type, "org.eclipse.sisu.Priority");
+        }
+    };
+
+    private static final ClassValue<Function<Annotation, Class<?>[]>> GET_TYPED_VALUE_FN = new ClassValue<Function<Annotation, Class<?>[]>>() {
+        protected Function<Annotation, Class<?>[]> computeValue(final Class<?> type) {
+            return new MethodFunction<>(type, "org.eclipse.sisu.Typed");
+        }
+    };
+
+    static class MethodFunction<R> implements Function<Annotation, R> {
+        private final Method method;
+
+        MethodFunction(Class<?> type, String expectedName) {
+            final Class<? extends Annotation> annotationType = type.asSubclass(Annotation.class);
+            if (!annotationType.getName().equals(expectedName)) {
+                throw new IllegalArgumentException("Wrong class name");
+            }
+            final Method method;
+            try {
+                method = annotationType.getDeclaredMethod("value");
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException(e);
+            }
+            this.method = method;
+        }
+
+        @SuppressWarnings("unchecked")
+        public R apply(final Annotation annotation) {
+            try {
+                return (R) method.invoke(annotation);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    static class Annotations {
+        private final boolean hasPriority;
+        private final int priority;
+        private final String named;
+        private final boolean inject;
+        private final boolean singleton;
+        private final boolean nullable;
+        private final List<Class<?>> typed;
+
+        private Annotations(AnnotatedElement element) {
+            boolean hasPriority = false;
+            int priority = 0;
+            String named = null;
+            boolean inject = false;
+            boolean singleton = false;
+            boolean nullable = false;
+            List<Class<?>> typed = null;
+            for (Annotation annotation : element.getAnnotations()) {
+                final Class<? extends Annotation> annoType = annotation.annotationType();
+                final String annoName = annoType.getName();
+                switch (annoName) {
+                    case "javax.inject.Inject":
+                        inject = true;
+                        break;
+                    case "javax.inject.Singleton":
+                    case "org.eclipse.sisu.EagerSingleton":
+                    case "org.sonatype.inject.EagerSingleton":
+                        singleton = true;
+                        break;
+                    case "javax.inject.Named":
+                        named = GET_NAMED_VALUE_FN.get(annoType).apply(annotation);
+                        break;
+                    case "org.eclipse.sisu.Nullable":
+                    case "org.sonatype.inject.Nullable":
+                        nullable = true;
+                        break;
+                    case "org.eclipse.sisu.Priority": {
+                        priority = GET_PRIORITY_VALUE_FN.get(annoType).apply(annotation).intValue();
+                        break;
+                    }
+                    case "org.eclipse.sisu.Typed": {
+                        typed = List.of(GET_TYPED_VALUE_FN.get(annoType).apply(annotation));
+                        break;
+                    }
+                }
+            }
+            this.hasPriority = hasPriority;
+            this.priority = priority;
+            this.named = named;
+            this.inject = inject;
+            this.singleton = singleton;
+            this.nullable = nullable;
+            this.typed = typed;
+        }
+
+        static Annotations of(AnnotatedElement element) {
+            return new Annotations(element);
+        }
+
+        boolean hasPriority() {
+            return hasPriority;
+        }
+
+        int getPriority() {
+            return priority;
+        }
+
+        String getNamed() {
+            return named;
+        }
+
+        boolean isInject() {
+            return inject;
+        }
+
+        boolean isSingleton() {
+            return singleton;
+        }
+
+        boolean isNullable() {
+            return nullable;
+        }
+
+        List<Class<?>> getTyped() {
+            return typed;
+        }
     }
 }
