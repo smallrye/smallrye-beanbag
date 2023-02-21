@@ -11,9 +11,11 @@ import org.apache.maven.wagon.providers.http.LightweightHttpWagon;
 import org.apache.maven.wagon.providers.http.LightweightHttpWagonAuthenticator;
 import org.apache.maven.wagon.providers.http.LightweightHttpsWagon;
 import org.eclipse.aether.transport.wagon.WagonProvider;
+import org.eclipse.sisu.Priority;
 
 @Named("basic")
 @Singleton
+@Priority(100)
 final class BasicWagonProvider implements WagonProvider {
     BasicWagonProvider() {
     }

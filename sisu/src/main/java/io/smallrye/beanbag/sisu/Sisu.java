@@ -43,23 +43,24 @@ import io.smallrye.common.constraint.Assert;
  * A utility which can configure a {@link BeanBag} using Eclipse SISU resources and annotations.
  */
 public final class Sisu {
-    private Sisu() {
+    private final Set<Class<?>> visited = new HashSet<>();
+    private final BeanBag.Builder builder;
+
+    private Sisu(final BeanBag.Builder builder) {
+        this.builder = builder;
     }
 
     /**
-     * Perform the SISU configuration.
+     * Scan the given class loader for additional SISU items.
      *
-     * @param classLoader the class loader to look in for SISU resources (must not be {@code null})
-     * @param builder the container builder to configure (must not be {@code null})
-     * @param filter a filter to apply to all SISU dependency resolutions (must not be {@code null})
+     * @param classLoader the class loader to scan (must not be {@code null})
+     * @param filter the dependency filter to apply (must not be {@code null})
      */
-    public static void configureSisu(ClassLoader classLoader, BeanBag.Builder builder, DependencyFilter filter) {
+    public void addClassLoader(ClassLoader classLoader, DependencyFilter filter) {
         Assert.checkNotNullParam("classLoader", classLoader);
-        Assert.checkNotNullParam("builder", builder);
         Assert.checkNotNullParam("filter", filter);
         try {
             final Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
-            final Set<Class<?>> visited = new HashSet<>();
             while (e.hasMoreElements()) {
                 final URL url = e.nextElement();
                 final URLConnection conn = url.openConnection();
@@ -79,10 +80,11 @@ public final class Sisu {
                                 final Class<?> clazz;
                                 try {
                                     clazz = Class.forName(className, false, classLoader);
-                                } catch (ClassNotFoundException ex) {
-                                    throw new RuntimeException("Could not load " + className);
+                                } catch (ClassNotFoundException | LinkageError ex) {
+                                    // todo: log it
+                                    continue;
                                 }
-                                addOne(builder, clazz, filter, visited);
+                                addClass(clazz, filter);
                             }
                         }
                     }
@@ -93,9 +95,17 @@ public final class Sisu {
         }
     }
 
+    /**
+     * Add the given class as a SISU item.
+     *
+     * @param clazz the class to add (must not be {@code null})
+     * @param filter the dependency filter to apply (must not be {@code null})
+     * @param <T> the class type
+     */
     @SuppressWarnings("unchecked")
-    private static <T> void addOne(BeanBag.Builder builder, Class<T> clazz, final DependencyFilter filter,
-            final Set<Class<?>> visited) {
+    public <T> void addClass(Class<T> clazz, DependencyFilter filter) {
+        Assert.checkNotNullParam("clazz", clazz);
+        Assert.checkNotNullParam("filter", filter);
         if (!visited.add(clazz)) {
             // duplicate
             return;
@@ -108,6 +118,7 @@ public final class Sisu {
         }
         final Typed typed = clazz.getAnnotation(Typed.class);
         if (typed != null) {
+            //noinspection RedundantCast
             beanBuilder.addRestrictedTypes((List<Class<? super T>>) (List<?>) List.of(typed.value()));
         }
         if (clazz.isAnnotationPresent(Singleton.class)) {
@@ -149,6 +160,28 @@ public final class Sisu {
                 addOneProvider(builder, genericInterface, clazz.asSubclass(Provider.class), named, priority);
             }
         }
+    }
+
+    /**
+     * Perform SISU configuration on the given builder.
+     *
+     * @param classLoader the class loader to look in for SISU resources (must not be {@code null})
+     * @param builder the container builder to configure (must not be {@code null})
+     * @param filter a filter to apply to all SISU dependency resolutions (must not be {@code null})
+     */
+    public static void configureSisu(ClassLoader classLoader, BeanBag.Builder builder, DependencyFilter filter) {
+        createFor(builder).addClassLoader(classLoader, filter);
+    }
+
+    /**
+     * Create a new SISU configurator for the given BeanBag builder.
+     *
+     * @param builder the builder (must not be {@code null})
+     * @return the new SISU configurator (not {@code null})
+     */
+    public static Sisu createFor(BeanBag.Builder builder) {
+        Assert.checkNotNullParam("builder", builder);
+        return new Sisu(builder);
     }
 
     @SuppressWarnings("unchecked")

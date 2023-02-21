@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.apache.maven.settings.Mirror;
 import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
@@ -19,31 +20,14 @@ import org.apache.maven.settings.building.SettingsProblem;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.artifact.DefaultArtifactType;
-import org.eclipse.aether.collection.DependencyGraphTransformer;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.Proxy;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.repository.RepositoryPolicy;
-import org.eclipse.aether.util.artifact.DefaultArtifactTypeRegistry;
-import org.eclipse.aether.util.artifact.JavaScopes;
-import org.eclipse.aether.util.graph.manager.ClassicDependencyManager;
-import org.eclipse.aether.util.graph.selector.AndDependencySelector;
-import org.eclipse.aether.util.graph.selector.OptionalDependencySelector;
-import org.eclipse.aether.util.graph.selector.ScopeDependencySelector;
-import org.eclipse.aether.util.graph.transformer.ChainedDependencyGraphTransformer;
-import org.eclipse.aether.util.graph.transformer.ConflictResolver;
-import org.eclipse.aether.util.graph.transformer.JavaDependencyContextRefiner;
-import org.eclipse.aether.util.graph.transformer.JavaScopeDeriver;
-import org.eclipse.aether.util.graph.transformer.JavaScopeSelector;
-import org.eclipse.aether.util.graph.transformer.NearestVersionSelector;
-import org.eclipse.aether.util.graph.transformer.SimpleOptionalitySelector;
-import org.eclipse.aether.util.graph.traverser.FatArtifactTraverser;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.eclipse.aether.util.repository.DefaultMirrorSelector;
 import org.eclipse.aether.util.repository.DefaultProxySelector;
-import org.eclipse.aether.util.repository.SimpleArtifactDescriptorPolicy;
 
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.BeanInstantiationException;
@@ -63,8 +47,18 @@ public final class MavenFactory {
             final DependencyFilter dependencyFilter) {
         final BeanBag.Builder builder = BeanBag.builder();
         configurator.accept(builder);
+        final Sisu sisu = Sisu.createFor(builder);
+        // these might or might not be available to the instance, when running within Maven itself
+        try {
+            sisu.addClass(BasicWagonConfigurator.class, dependencyFilter);
+        } catch (Exception | LinkageError ignored) {
+        }
+        try {
+            sisu.addClass(BasicWagonProvider.class, dependencyFilter);
+        } catch (Exception | LinkageError ignored) {
+        }
         for (ClassLoader classLoader : classLoaders) {
-            Sisu.configureSisu(classLoader, builder, dependencyFilter);
+            sisu.addClassLoader(classLoader, dependencyFilter);
         }
         container = builder.build();
     }
@@ -156,6 +150,16 @@ public final class MavenFactory {
     }
 
     /**
+     * Locate the Maven settings builder instance.
+     *
+     * @return the repository system instance (not {@code null})
+     * @throws BeanInstantiationException if there is some problem finding or creating the repository system instance
+     */
+    public SettingsBuilder getSettingsBuilder() throws BeanInstantiationException {
+        return getContainer().requireBean(SettingsBuilder.class);
+    }
+
+    /**
      * Create a basic settings instance using reasonable defaults.
      *
      * @param globalSettings the global settings file (may be {@code null} if none)
@@ -199,7 +203,7 @@ public final class MavenFactory {
     public RepositorySystemSession createSession(final Settings settings) throws BeanInstantiationException {
         Assert.checkNotNullParam("settings", settings);
         final RepositorySystem system = getRepositorySystem();
-        DefaultRepositorySystemSession session = new DefaultRepositorySystemSession();
+        final DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
         // offline = "simple"
         // normal = "enhanced"
         String repositoryType = "default";
@@ -221,40 +225,8 @@ public final class MavenFactory {
         }
         session.setProxySelector(proxySelector);
 
-        session.setDependencyManager(new ClassicDependencyManager());
-        session.setArtifactDescriptorPolicy(new SimpleArtifactDescriptorPolicy(true, true));
-        session.setDependencyTraverser(new FatArtifactTraverser());
-
-        DependencyGraphTransformer dependencyGraphTransformer = new ChainedDependencyGraphTransformer(
-                new ConflictResolver(
-                        new NearestVersionSelector(),
-                        new JavaScopeSelector(),
-                        new SimpleOptionalitySelector(),
-                        new JavaScopeDeriver()),
-                new JavaDependencyContextRefiner());
-        session.setDependencyGraphTransformer(dependencyGraphTransformer);
-
-        DefaultArtifactTypeRegistry artifactTypeRegistry = new DefaultArtifactTypeRegistry();
-        artifactTypeRegistry.add(new DefaultArtifactType("pom"));
-        artifactTypeRegistry.add(new DefaultArtifactType("maven-plugin", "jar", "", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("jar", "jar", "", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("ejb", "jar", "", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("ejb-client", "jar", "client", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("test-jar", "jar", "tests", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("javadoc", "jar", "javadoc", "java"));
-        artifactTypeRegistry.add(new DefaultArtifactType("java-source", "jar", "sources", "java", false, false));
-        artifactTypeRegistry.add(new DefaultArtifactType("war", "war", "", "java", false, true));
-        artifactTypeRegistry.add(new DefaultArtifactType("ear", "ear", "", "java", false, true));
-        artifactTypeRegistry.add(new DefaultArtifactType("rar", "rar", "", "java", false, true));
-        artifactTypeRegistry.add(new DefaultArtifactType("par", "par", "", "java", false, true));
-        session.setArtifactTypeRegistry(artifactTypeRegistry);
-
         session.setSystemProperties(System.getProperties());
         session.setConfigProperties(System.getProperties());
-
-        session.setDependencySelector(new AndDependencySelector(
-                new ScopeDependencySelector(Set.of(JavaScopes.RUNTIME, JavaScopes.COMPILE), Set.of()),
-                new OptionalDependencySelector()));
 
         return session;
     }
