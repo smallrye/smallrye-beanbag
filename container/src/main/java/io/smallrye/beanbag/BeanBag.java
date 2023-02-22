@@ -154,7 +154,7 @@ public final class BeanBag {
          * Add a new bean which resolves to the given instance.
          *
          * @param bean the bean instance (must not be {@code null})
-         * @return the bean builder (not {@code null})
+         * @return this builder (not {@code null})
          * @param <T> the bean type
          */
         @SuppressWarnings("unchecked")
