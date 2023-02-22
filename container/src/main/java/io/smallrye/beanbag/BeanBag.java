@@ -16,8 +16,8 @@ import io.smallrye.common.constraint.Assert;
  */
 public final class BeanBag {
 
-    private final List<BeanDefinition<?>> beanDefinitions;
     private final Scope singletonScope;
+    private final ScopeDefinition scopeDefinition;
 
     BeanBag(Builder builder) {
         final List<BeanDefinition<?>> definitions = new ArrayList<>();
@@ -30,8 +30,10 @@ public final class BeanBag {
                 definitions.add(definition);
             }
         }
-        singletonScope = Scope.of(null, singletonBeans);
-        beanDefinitions = List.copyOf(definitions);
+        // create a copy of the non-singleton scope so singletons can inject from there
+        final ScopeDefinition scopeDefinition = new ScopeDefinition(List.copyOf(definitions));
+        singletonScope = new Scope(null, scopeDefinition, new ScopeDefinition(singletonBeans));
+        this.scopeDefinition = scopeDefinition;
     }
 
     private <T> BeanDefinition<T> makeDefinition(final BeanBuilder<T> beanBuilder) {
@@ -51,7 +53,7 @@ public final class BeanBag {
      * @return the new resolution scope (not {@code null})
      */
     public Scope newScope() {
-        return Scope.of(singletonScope, beanDefinitions);
+        return new Scope(singletonScope, null, scopeDefinition);
     }
 
     /**
