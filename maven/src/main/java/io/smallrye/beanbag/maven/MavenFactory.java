@@ -1,13 +1,20 @@
 package io.smallrye.beanbag.maven;
 
 import java.io.File;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
+import org.apache.maven.settings.Activation;
+import org.apache.maven.settings.ActivationFile;
+import org.apache.maven.settings.ActivationOS;
+import org.apache.maven.settings.ActivationProperty;
 import org.apache.maven.settings.Mirror;
+import org.apache.maven.settings.Profile;
+import org.apache.maven.settings.Repository;
 import org.apache.maven.settings.Server;
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.building.DefaultSettingsBuilderFactory;
@@ -40,6 +47,7 @@ import io.smallrye.common.constraint.Assert;
  */
 public final class MavenFactory {
     private static final String MAVEN_CENTRAL = "https://repo1.maven.org/maven2";
+    private static final String NL = System.lineSeparator();
 
     private final BeanBag container;
 
@@ -160,6 +168,21 @@ public final class MavenFactory {
     }
 
     /**
+     * Create a basic settings from the container {@link SettingsBuilder} using reasonable defaults.
+     *
+     * @param globalSettings the global settings file (may be {@code null} if none)
+     * @param userSettings the user settings file (may be {@code null} if none)
+     * @param problemHandler the problem handler (may be {@code null} if none)
+     * @return the settings (not {@code null})
+     * @throws SettingsBuildingException if creating the settings has failed
+     */
+    public Settings createSettingsFromContainer(File globalSettings, File userSettings,
+            Consumer<SettingsProblem> problemHandler)
+            throws SettingsBuildingException {
+        return getSettings(globalSettings, userSettings, problemHandler, getSettingsBuilder());
+    }
+
+    /**
      * Create a basic settings instance using reasonable defaults.
      *
      * @param globalSettings the global settings file (may be {@code null} if none)
@@ -170,6 +193,11 @@ public final class MavenFactory {
      */
     public static Settings createSettings(File globalSettings, File userSettings, Consumer<SettingsProblem> problemHandler)
             throws SettingsBuildingException {
+        return getSettings(globalSettings, userSettings, problemHandler, new DefaultSettingsBuilderFactory().newInstance());
+    }
+
+    private static Settings getSettings(final File globalSettings, final File userSettings,
+            final Consumer<SettingsProblem> problemHandler, final SettingsBuilder builder) throws SettingsBuildingException {
         SettingsBuildingRequest request = new DefaultSettingsBuildingRequest();
         if (globalSettings != null) {
             request.setGlobalSettingsFile(globalSettings);
@@ -178,7 +206,6 @@ public final class MavenFactory {
             request.setUserSettingsFile(userSettings);
         }
         request.setSystemProperties(System.getProperties());
-        SettingsBuilder builder = new DefaultSettingsBuilderFactory().newInstance();
 
         SettingsBuildingResult result = builder.build(request);
         if (problemHandler != null) {
@@ -294,6 +321,282 @@ public final class MavenFactory {
     public static File getUserSettingsLocation() {
         String userHome = System.getProperty("user.home");
         return userHome == null ? null : new File(userHome + File.separator + ".m2" + File.separator + "settings.xml");
+    }
+
+    /**
+     * Dump the given settings to a string.
+     * Any passwords or secrets in the settings are masked.
+     * This is mainly useful for debugging; the output format may change and is not intended to be parsed by machines.
+     *
+     * @param settings the settings to dump (must not be {@code null})
+     * @return a string containing the dump of the settings
+     */
+    public static String dumpSettings(final Settings settings) {
+        return dumpSettings(new StringBuilder(), settings, 0).toString();
+    }
+
+    /**
+     * Dump the given settings to a string.
+     * Any passwords or secrets in the settings are masked.
+     * This is mainly useful for debugging; the output format may change and is not intended to be parsed by machines.
+     *
+     * @param sb the string builder to append to (must not be {@code null})
+     * @param settings the settings to dump (must not be {@code null})
+     * @param indent the indentation level
+     * @return the string builder {@code sb}
+     */
+    public static StringBuilder dumpSettings(final StringBuilder sb, final Settings settings, int indent) {
+        indent(sb, indent).append("settings={").append(NL);
+        joinStrings(indent(sb, indent + 1).append("activeProfiles=["), settings.getActiveProfiles()).append(']').append(NL);
+        indent(sb, indent + 1).append("localRepository=").append(settings.getLocalRepository()).append(NL);
+        dumpMirrors(sb, settings.getMirrors(), indent + 1).append(NL);
+        indent(sb, indent + 1).append("modelEncoding=").append(settings.getModelEncoding()).append(NL);
+        joinStrings(indent(sb, indent + 1).append("pluginGroups=["), settings.getPluginGroups()).append(']').append(NL);
+        dumpProfiles(sb, settings.getProfiles(), indent + 1).append(NL);
+        dumpProxies(sb, settings.getProxies(), indent + 1).append(NL);
+        dumpServers(sb, settings.getServers(), indent + 1).append(NL);
+        indent(sb, indent + 1).append("interactiveMode=").append(settings.isInteractiveMode()).append(NL);
+        indent(sb, indent + 1).append("offline=").append(settings.isOffline()).append(NL);
+        indent(sb, indent + 1).append("usePluginRegistry=").append(settings.isUsePluginRegistry()).append(NL);
+        return indent(sb, indent).append("}");
+    }
+
+    private static StringBuilder dumpServers(final StringBuilder sb, final List<Server> servers, final int indent) {
+        indent(sb, indent).append("servers=[");
+        Iterator<Server> iterator = servers.iterator();
+        if (iterator.hasNext()) {
+            sb.append(NL);
+            dumpServer(sb, iterator.next(), indent + 1);
+            while (iterator.hasNext()) {
+                sb.append(',').append(NL);
+                dumpServer(sb, iterator.next(), indent + 1);
+            }
+            sb.append(NL);
+            indent(sb, indent);
+        }
+        return sb.append(']');
+    }
+
+    private static StringBuilder dumpServer(final StringBuilder sb, final Server server, final int indent) {
+        indent(sb, indent).append("server={").append(NL);
+        indent(sb, indent + 1).append("username=").append(server.getUsername()).append(NL);
+        indent(sb, indent + 1).append("password=").append(server.getPassword() == null ? "<NOT SET>" : "<SET>").append(NL);
+        indent(sb, indent + 1).append("privateKey=").append(server.getPrivateKey() == null ? "<NOT SET>" : "<SET>").append(NL);
+        indent(sb, indent + 1).append("passphrase=").append(server.getPassphrase() == null ? "<NOT SET>" : "<SET>").append(NL);
+        indent(sb, indent + 1).append("filePermissions=").append(server.getFilePermissions()).append(NL);
+        indent(sb, indent + 1).append("directoryPermissions=").append(server.getDirectoryPermissions()).append(NL);
+        indent(sb, indent + 1).append("configuration=").append(server.getConfiguration()).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpProxies(final StringBuilder sb, final List<org.apache.maven.settings.Proxy> proxies,
+            final int indent) {
+        indent(sb, indent).append("proxies=[");
+        Iterator<org.apache.maven.settings.Proxy> iterator = proxies.iterator();
+        if (iterator.hasNext()) {
+            sb.append(NL);
+            dumpProxy(sb, iterator.next(), indent + 1);
+            while (iterator.hasNext()) {
+                sb.append(',').append(NL);
+                dumpProxy(sb, iterator.next(), indent + 1);
+            }
+            sb.append(NL);
+            indent(sb, indent);
+        }
+        return sb.append(']');
+    }
+
+    private static StringBuilder dumpProxy(final StringBuilder sb, final org.apache.maven.settings.Proxy proxy,
+            final int indent) {
+        indent(sb, indent).append("proxy={").append(NL);
+        indent(sb, indent + 1).append("active=").append(proxy.isActive()).append(NL);
+        indent(sb, indent + 1).append("protocol=").append(proxy.getProtocol()).append(NL);
+        indent(sb, indent + 1).append("username=").append(proxy.getUsername()).append(NL);
+        indent(sb, indent + 1).append("password=").append(proxy.getPassword() == null ? "<NOT SET>" : "<SET>").append(NL);
+        indent(sb, indent + 1).append("port=").append(proxy.getPort()).append(NL);
+        indent(sb, indent + 1).append("host=").append(proxy.getHost()).append(NL);
+        indent(sb, indent + 1).append("nonProxyHosts=").append(proxy.getNonProxyHosts()).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpProfiles(final StringBuilder sb, final List<Profile> profiles, final int indent) {
+        indent(sb, indent).append("profiles=[");
+        Iterator<Profile> iterator = profiles.iterator();
+        if (iterator.hasNext()) {
+            sb.append(NL);
+            dumpProfile(sb, iterator.next(), indent + 1);
+            while (iterator.hasNext()) {
+                sb.append(',').append(NL);
+                dumpProfile(sb, iterator.next(), indent + 1);
+            }
+            sb.append(NL);
+            indent(sb, indent);
+        }
+        return sb.append(']');
+    }
+
+    private static StringBuilder dumpProfile(final StringBuilder sb, final Profile profile, final int indent) {
+        indent(sb, indent).append("profile={").append(NL);
+        if (profile.getActivation() != null) {
+            dumpActivation(sb, profile.getActivation(), indent + 1).append(NL);
+        }
+        dumpRepositories(sb, "repositories", profile.getRepositories(), indent + 1).append(NL);
+        dumpRepositories(sb, "pluginRepositories", profile.getPluginRepositories(), indent + 1).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpRepositories(final StringBuilder sb, final String label,
+            final List<Repository> repositories, final int indent) {
+        indent(sb, indent).append(label).append("=[");
+        Iterator<Repository> iterator = repositories.iterator();
+        if (iterator.hasNext()) {
+            sb.append(NL);
+            dumpRepository(sb, iterator.next(), indent + 1);
+            while (iterator.hasNext()) {
+                sb.append(',').append(NL);
+                dumpRepository(sb, iterator.next(), indent + 1);
+            }
+            sb.append(NL);
+            indent(sb, indent);
+        }
+        return sb.append(']');
+    }
+
+    private static StringBuilder dumpRepository(final StringBuilder sb, final Repository repository, final int indent) {
+        indent(sb, indent).append("repository={").append(NL);
+        indent(sb, indent + 1).append("id=").append(repository.getId()).append(NL);
+        indent(sb, indent + 1).append("name=").append(repository.getName()).append(NL);
+        indent(sb, indent + 1).append("url=").append(repository.getUrl()).append(NL);
+        indent(sb, indent + 1).append("layout=").append(repository.getLayout()).append(NL);
+        dumpRepositoryPolicy(sb, "releasesPolicy", repository.getReleases(), indent + 1).append(NL);
+        dumpRepositoryPolicy(sb, "snapshotsPolicy", repository.getSnapshots(), indent + 1).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpRepositoryPolicy(final StringBuilder sb, final String label,
+            final org.apache.maven.settings.RepositoryPolicy repositoryPolicy, final int indent) {
+        indent(sb, indent).append(label).append("={").append(NL);
+        indent(sb, indent + 1).append("enabled=").append(repositoryPolicy.isEnabled()).append(NL);
+        indent(sb, indent + 1).append("updatePolicy=").append(repositoryPolicy.getUpdatePolicy()).append(NL);
+        indent(sb, indent + 1).append("checksumPolicy=").append(repositoryPolicy.getChecksumPolicy()).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpActivation(final StringBuilder sb, final Activation activation, final int indent) {
+        indent(sb, indent).append("activation={").append(NL);
+        indent(sb, indent + 1).append("activeByDefault=").append(activation.isActiveByDefault()).append(NL);
+        ActivationFile file = activation.getFile();
+        if (file != null) {
+            String exists = file.getExists();
+            String missing = file.getMissing();
+            if (exists != null || missing != null) {
+                indent(sb, indent + 1);
+                if (exists != null) {
+                    sb.append("file=").append(exists);
+                    if (missing != null) {
+                        sb.append(',');
+                    }
+                }
+                if (missing != null) {
+                    sb.append("!file=").append(missing);
+                }
+                sb.append(NL);
+            }
+        }
+        String jdk = activation.getJdk();
+        if (jdk != null) {
+            indent(sb, indent + 1).append("jdk=").append(jdk).append(NL);
+        }
+        ActivationOS os = activation.getOs();
+        if (os != null) {
+            String arch = os.getArch();
+            String name = os.getName();
+            String family = os.getFamily();
+            String version = os.getVersion();
+            if (arch != null || name != null || family != null || version != null) {
+                indent(sb, indent + 1);
+                if (arch != null) {
+                    sb.append("osArch=").append(arch);
+                    if (name != null || family != null || version != null) {
+                        sb.append(',');
+                    }
+                }
+                if (name != null) {
+                    sb.append("osName=").append(name);
+                    if (family != null || version != null) {
+                        sb.append(',');
+                    }
+                }
+                if (family != null) {
+                    sb.append("osFamily=").append(family);
+                    if (version != null) {
+                        sb.append(',');
+                    }
+                }
+                if (version != null) {
+                    sb.append("osVersion=").append(version);
+                }
+                sb.append(NL);
+            }
+        }
+        ActivationProperty property = activation.getProperty();
+        if (property != null) {
+            String name = property.getName();
+            String value = property.getValue();
+            if (name != null) {
+                indent(sb, indent + 1).append("property=").append(name);
+                if (value != null) {
+                    sb.append("=").append(value);
+                }
+                sb.append(NL);
+            }
+        }
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder dumpMirrors(final StringBuilder sb, final List<Mirror> mirrors, int indent) {
+        indent(sb, indent).append("mirrors=[");
+        Iterator<Mirror> iterator = mirrors.iterator();
+        if (iterator.hasNext()) {
+            sb.append(NL);
+            dumpMirror(sb, iterator.next(), indent + 1);
+            while (iterator.hasNext()) {
+                sb.append(',').append(NL);
+                dumpMirror(sb, iterator.next(), indent + 1);
+            }
+            sb.append(NL);
+            indent(sb, indent);
+        }
+        return sb.append(']');
+    }
+
+    private static StringBuilder dumpMirror(final StringBuilder sb, final Mirror mirror, int indent) {
+        indent(sb, indent).append("mirror={").append(NL);
+        indent(sb, indent + 1).append("name=").append(mirror.getName()).append(NL);
+        indent(sb, indent + 1).append("url=").append(mirror.getUrl()).append(NL);
+        indent(sb, indent + 1).append("layout=").append(mirror.getLayout()).append(NL);
+        indent(sb, indent + 1).append("mirrorOf=").append(mirror.getMirrorOf()).append(NL);
+        indent(sb, indent + 1).append("mirrorOfLayouts=").append(mirror.getMirrorOfLayouts()).append(NL);
+        indent(sb, indent + 1).append("blocked=").append(mirror.isBlocked()).append(NL);
+        return indent(sb, indent).append('}');
+    }
+
+    private static StringBuilder joinStrings(final StringBuilder sb, final List<String> strings) {
+        Iterator<String> iterator = strings.iterator();
+        if (iterator.hasNext()) {
+            sb.append(iterator.next());
+            while (iterator.hasNext()) {
+                sb.append(',').append(iterator.next());
+            }
+        }
+        return sb;
+    }
+
+    private static StringBuilder indent(StringBuilder sb, int indent) {
+        for (int i = 0; i < indent; i++) {
+            sb.append("    ");
+        }
+        return sb;
     }
 
     private static Proxy convertProxy(org.apache.maven.settings.Proxy proxy) {
