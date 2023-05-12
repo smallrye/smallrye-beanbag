@@ -14,13 +14,16 @@ public final class Scope {
     private final Scope resolutionScope;
     private final List<Bean<?>> beans;
     private final Map<Class<?>, List<Bean<?>>> beansByType = new ConcurrentHashMap<>();
+    private final BeanBag container;
 
-    Scope(final Scope parent, final ScopeDefinition resolutionScope, final ScopeDefinition definition) {
+    Scope(final BeanBag container, final Scope parent, final ScopeDefinition resolutionScope,
+            final ScopeDefinition definition) {
+        this.container = container;
         this.parent = parent;
         if (resolutionScope == null) {
             this.resolutionScope = this;
         } else {
-            this.resolutionScope = new Scope(this, null, resolutionScope);
+            this.resolutionScope = new Scope(container, this, null, resolutionScope);
         }
         this.beans = Util.mapList(definition.getBeanDefinitions(), Bean::new, Bean[]::new);
     }
@@ -258,5 +261,9 @@ public final class Scope {
             problems.forEach(nbe::addSuppressed);
         }
         throw nbe;
+    }
+
+    public BeanBag getContainer() {
+        return container;
     }
 }

@@ -35,10 +35,12 @@ import org.eclipse.aether.repository.RepositoryPolicy;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.eclipse.aether.util.repository.DefaultMirrorSelector;
 import org.eclipse.aether.util.repository.DefaultProxySelector;
+import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.BeanInstantiationException;
 import io.smallrye.beanbag.DependencyFilter;
+import io.smallrye.beanbag.Scope;
 import io.smallrye.beanbag.sisu.Sisu;
 import io.smallrye.common.constraint.Assert;
 
@@ -56,18 +58,22 @@ public final class MavenFactory {
         final BeanBag.Builder builder = BeanBag.builder();
         configurator.accept(builder);
         final Sisu sisu = Sisu.createFor(builder);
-        // these might or might not be available to the instance, when running within Maven itself
-        try {
-            sisu.addClass(BasicWagonConfigurator.class, dependencyFilter);
-        } catch (Exception | LinkageError ignored) {
-        }
-        try {
-            sisu.addClass(BasicWagonProvider.class, dependencyFilter);
-        } catch (Exception | LinkageError ignored) {
-        }
+        builder.addBean(BeanBag.class)
+                .setSupplier(Scope::getContainer)
+                .build();
+        // add our simple plexus container
+        sisu.addClass(PlexusContainerImpl.class, dependencyFilter);
         for (ClassLoader classLoader : classLoaders) {
             sisu.addClassLoader(classLoader, dependencyFilter);
         }
+        // this will mimic the behavior of `component.xml` from maven-core < 4; if 4 is used, a better bean becomes available
+        builder.addBean(SecDispatcher.class)
+                .setName("maven")
+                .setPriority(-100)
+                .setSingleton(true)
+                .setSupplier(
+                        scope -> scope.getBean(SecDispatcher.class, "", false, (type, name, priority) -> name.isEmpty()))
+                .build();
         container = builder.build();
     }
 

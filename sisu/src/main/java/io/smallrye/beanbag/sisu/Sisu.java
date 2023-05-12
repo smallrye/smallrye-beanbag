@@ -21,15 +21,21 @@ import java.lang.reflect.WildcardType;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.Function;
 
 import javax.inject.Provider;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.BeanSupplier;
@@ -57,7 +63,7 @@ public final class Sisu {
         Assert.checkNotNullParam("classLoader", classLoader);
         Assert.checkNotNullParam("filter", filter);
         try {
-            final Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
+            Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
             while (e.hasMoreElements()) {
                 final URL url = e.nextElement();
                 final URLConnection conn = url.openConnection();
@@ -87,8 +93,333 @@ public final class Sisu {
                     }
                 }
             }
+            // these are deprecated but still used in Maven < 4.x
+            e = classLoader.getResources("META-INF/plexus/components.xml");
+            while (e.hasMoreElements()) {
+                final URL url = e.nextElement();
+                final URLConnection conn = url.openConnection();
+                try (InputStream is = conn.getInputStream()) {
+                    try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                        try (BufferedReader br = new BufferedReader(isr)) {
+                            XMLStreamReader xr = XMLInputFactory.newInstance().createXMLStreamReader(br);
+                            try (XMLCloser ignored = xr::close) {
+                                while (xr.hasNext()) {
+                                    if (xr.next() == XMLStreamReader.START_ELEMENT) {
+                                        if (xr.getLocalName().equals("component-set")) {
+                                            parseComponentSet(xr, classLoader, filter);
+                                        } else {
+                                            consume(xr);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (XMLStreamException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    }
+                }
+            }
         } catch (IOException ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+    interface XMLCloser extends AutoCloseable {
+        void close() throws XMLStreamException;
+    }
+
+    private void consume(final XMLStreamReader xr) throws XMLStreamException {
+        while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    return;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    consume(xr);
+                    break;
+                }
+            }
+        }
+    }
+
+    private void parseComponentSet(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+            throws XMLStreamException {
+        while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    return;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    if (xr.getLocalName().equals("components")) {
+                        parseComponents(xr, classLoader, filter);
+                    } else {
+                        consume(xr);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    private void parseComponents(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+            throws XMLStreamException {
+        while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    return;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    if (xr.getLocalName().equals("component")) {
+                        parseComponent(xr, classLoader, filter);
+                    } else {
+                        consume(xr);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    private void parseComponent(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+            throws XMLStreamException {
+
+        Class<?> clazz = null;
+        Class<?> type = null;
+        String name = null;
+        boolean singleton = false;
+        List<Requirement> requirements = List.of();
+
+        loop: while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    // all done
+                    break loop;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    switch (xr.getLocalName()) {
+                        case "implementation": {
+                            if (clazz == null) {
+                                // try to load it up
+                                final String className = xr.getElementText();
+                                try {
+                                    clazz = Class.forName(className, false, classLoader);
+                                } catch (ClassNotFoundException | LinkageError ex) {
+                                    // todo: log it
+                                    continue;
+                                }
+                                if (new Annotations(clazz).getNamed() != null) {
+                                    // it's a proper component; use the annotations to parse it
+                                    addClass(clazz, filter);
+                                    consume(xr);
+                                    return;
+                                }
+                            } else {
+                                consume(xr);
+                            }
+                            break;
+                        }
+                        case "role": {
+                            if (type == null) {
+                                final String className = xr.getElementText();
+                                try {
+                                    type = Class.forName(className, false, classLoader);
+                                } catch (ClassNotFoundException | LinkageError ex) {
+                                    // todo: log it
+                                    continue;
+                                }
+                            } else {
+                                consume(xr);
+                            }
+                            break;
+                        }
+                        case "role-hint": {
+                            if (name == null) {
+                                name = xr.getElementText();
+                                if (name.equals("default")) {
+                                    name = "";
+                                }
+                            } else {
+                                consume(xr);
+                            }
+                            break;
+                        }
+                        case "instantiation-strategy": {
+                            switch (xr.getElementText()) {
+                                case "per-lookup": {
+                                    singleton = false;
+                                    break;
+                                }
+                                case "poolable":
+                                case "keep-alive":
+                                case "singleton": {
+                                    singleton = true;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                        case "requirements": {
+                            requirements = parseRequirements(xr, classLoader, filter);
+                            break;
+                        }
+                        default: {
+                            consume(xr);
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // add the bean the plexus way
+        addBeanFromXml(clazz, type, name, singleton, filter, requirements, classLoader);
+    }
+
+    private List<Requirement> parseRequirements(final XMLStreamReader xr, final ClassLoader classLoader,
+            final DependencyFilter filter) throws XMLStreamException {
+        List<Requirement> list = null;
+        loop: while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    break loop;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    switch (xr.getLocalName()) {
+                        case "requirement": {
+                            if (list == null) {
+                                list = new ArrayList<>();
+                            }
+                            list.add(parseRequirement(xr, classLoader, filter));
+                            break;
+                        }
+                        default: {
+                            consume(xr);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return list == null ? List.of() : List.copyOf(list);
+    }
+
+    private Requirement parseRequirement(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+            throws XMLStreamException {
+        final Requirement requirement = new Requirement();
+        while (xr.hasNext()) {
+            switch (xr.next()) {
+                case XMLStreamReader.END_ELEMENT: {
+                    return requirement;
+                }
+                case XMLStreamReader.START_ELEMENT: {
+                    switch (xr.getLocalName()) {
+                        case "role": {
+                            requirement.injectType = xr.getElementText();
+                            break;
+                        }
+                        case "role-hint": {
+                            requirement.injectName = xr.getElementText();
+                            if (requirement.injectName.equals("default")) {
+                                requirement.injectName = "";
+                            }
+                            break;
+                        }
+                        case "field":
+                        case "field-name": {
+                            requirement.fieldName = xr.getElementText();
+                            break;
+                        }
+                        // todo: configuration
+                        default: {
+                            consume(xr);
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        return null;
+    }
+
+    static final class Requirement {
+        String injectType;
+        String injectName;
+        String fieldName;
+    }
+
+    private <T> void addBeanFromXml(final Class<T> clazz, final Class<?> type, final String named, final boolean singleton,
+            final DependencyFilter filter, List<Requirement> injections, final ClassLoader classLoader) {
+        if (!visited.add(clazz)) {
+            // duplicate
+            return;
+        }
+        final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
+        final Annotations clazzAnnotations = Annotations.of(clazz);
+        if (singleton) {
+            beanBuilder.setSingleton(true);
+        }
+        if (named != null && !named.isEmpty()) {
+            beanBuilder.setName(named);
+        }
+        if (type != null && !type.equals(clazz)) {
+            beanBuilder.addRestrictedTypes(List.of((Class<? super T>) type));
+        }
+        final BeanBag.SupplierBuilder<T> supplierBuilder = beanBuilder.buildSupplier();
+        // despite being a legacy component, there's no reason why we couldn't inject things like normal
+        Constructor<T> ctor = findConstructor(clazz);
+        for (Parameter parameter : ctor.getParameters()) {
+            Annotations paramAnnotations = Annotations.of(parameter);
+            final boolean optional = paramAnnotations.isNullable();
+            final String paramNamed = paramAnnotations.getNamed();
+            final String name = paramNamed == null ? "" : paramNamed;
+            final Class<?> parameterType = parameter.getType();
+            supplierBuilder.addConstructorArgument(
+                    getSupplier(parameterType, parameter.getParameterizedType(), name, optional, filter));
+        }
+        supplierBuilder.setConstructor(ctor);
+        // scan for injectable fields and methods
+        addFieldInjections(clazz, supplierBuilder, filter);
+        addMethodInjections(clazz, supplierBuilder, filter);
+
+        // now add our manual injections
+        for (Requirement req : injections) {
+            String fieldName = req.fieldName;
+            if (fieldName == null) {
+                continue;
+            }
+            Field field;
+            try {
+                field = clazz.getDeclaredField(fieldName);
+                field.setAccessible(true);
+            } catch (Exception e) {
+                // ignore & continue
+                continue;
+            }
+            Class<?> fieldType = field.getType();
+            if (req.injectType != null) {
+                try {
+                    fieldType = Class.forName(req.injectType, false, classLoader);
+                } catch (ClassNotFoundException e) {
+                    // fall back to field type
+                }
+            }
+            String name = Objects.requireNonNullElse(req.injectName, "");
+            supplierBuilder.injectField(field, getSupplier(fieldType, field.getGenericType(), name, false, filter));
+        }
+
+        supplierBuilder.build();
+
+        beanBuilder.build();
+
+        // If the bean implements `Provider<Something>`, then also register the bean info under the thing it provides
+
+        for (Type genericInterface : clazz.getGenericInterfaces()) {
+            if (getRawType(genericInterface) == Provider.class) {
+                // it's a provider for something
+                addOneProvider(builder, genericInterface, clazz.asSubclass(Provider.class), clazzAnnotations);
+            }
         }
     }
 
@@ -228,8 +559,83 @@ public final class Sisu {
             } else {
                 throw new IllegalArgumentException("Invalid key type " + keyType + " for map");
             }
+        } else if (rawType == String.class) {
+            // special handling! funny business!
+            if (name.contains("${")) {
+                // expression! but with a weird syntax that isn't supported by smallrye-common-expression
+                return scope -> parseExpressionString(new StringItr(name), 0, false,
+                        Objects.requireNonNullElse(scope.getOptionalBean(Properties.class), new Properties()));
+            }
+            // just return the raw string
+            return BeanSupplier.of(name);
         } else {
             return BeanSupplier.resolving(rawType, name == null ? "" : name, optional, filter);
+        }
+    }
+
+    private static final class StringItr {
+        final String s;
+        int pos;
+        final int end;
+
+        StringItr(String s) {
+            this.s = s;
+            this.pos = 0;
+            this.end = s.length();
+        }
+
+        boolean hasNext() {
+            return pos < end;
+        }
+
+        char next() {
+            return s.charAt(pos++);
+        }
+
+        boolean nextMatches(String cmp) {
+            int cmpLen = cmp.length();
+            return pos + cmpLen <= end && s.regionMatches(pos, cmp, 0, cmpLen);
+        }
+
+        boolean match(String cmp) {
+            boolean b = nextMatches(cmp);
+            if (b) {
+                pos += cmp.length();
+            }
+            return b;
+        }
+    }
+
+    private static String parseExpressionString(StringItr itr, int recursion, boolean stopOnDefault, Properties properties) {
+        if (recursion > 10) {
+            throw new IllegalStateException("Deep recursion");
+        }
+        StringBuilder b = new StringBuilder();
+        while (itr.hasNext()) {
+            if (recursion > 0 && (itr.nextMatches("}") || stopOnDefault && itr.nextMatches(":-"))) {
+                // end
+                break;
+            } else if (itr.match("${")) {
+                doExprPart(b, itr, recursion + 1, properties);
+            } else {
+                // plain text
+                b.append(itr.next());
+            }
+        }
+        return b.toString();
+    }
+
+    private static void doExprPart(final StringBuilder b, final StringItr itr, final int recursion, Properties properties) {
+        String key = parseExpressionString(itr, recursion, true, properties);
+        if (itr.match("}") || !itr.hasNext()) {
+            b.append(properties.getProperty(key, ""));
+            return;
+        } else if (itr.match(":-")) {
+            b.append(properties.getProperty(key, parseExpressionString(itr, recursion, false, properties)));
+            return;
+        } else {
+            // ???
+            throw new IllegalStateException();
         }
     }
 

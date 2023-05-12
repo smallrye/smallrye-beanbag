@@ -32,7 +32,7 @@ public final class BeanBag {
         }
         // create a copy of the non-singleton scope so singletons can inject from there
         final ScopeDefinition scopeDefinition = new ScopeDefinition(List.copyOf(definitions));
-        singletonScope = new Scope(null, scopeDefinition, new ScopeDefinition(singletonBeans));
+        singletonScope = new Scope(this, null, scopeDefinition, new ScopeDefinition(singletonBeans));
         this.scopeDefinition = scopeDefinition;
     }
 
@@ -53,7 +53,7 @@ public final class BeanBag {
      * @return the new resolution scope (not {@code null})
      */
     public Scope newScope() {
-        return new Scope(singletonScope, null, scopeDefinition);
+        return new Scope(this, singletonScope, null, scopeDefinition);
     }
 
     /**
