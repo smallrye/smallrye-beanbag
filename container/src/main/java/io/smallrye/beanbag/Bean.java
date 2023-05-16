@@ -3,6 +3,8 @@ package io.smallrye.beanbag;
 import java.util.Comparator;
 import java.util.Set;
 
+import io.smallrye.common.constraint.Assert;
+
 /**
  * A holder for an instance of a bean with a given definition within a given scope.
  *
@@ -104,6 +106,7 @@ final class Bean<T> implements BeanSupplier<T> {
         private final BeanSupplier<T> provider;
 
         Pending(final BeanSupplier<T> provider) {
+            Assert.checkNotNullParam("provider", provider);
             this.provider = provider;
         }
 
