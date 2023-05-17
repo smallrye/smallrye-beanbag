@@ -474,8 +474,12 @@ public final class MavenFactory {
         indent(sb, indent + 1).append("name=").append(repository.getName()).append(NL);
         indent(sb, indent + 1).append("url=").append(repository.getUrl()).append(NL);
         indent(sb, indent + 1).append("layout=").append(repository.getLayout()).append(NL);
-        dumpRepositoryPolicy(sb, "releasesPolicy", repository.getReleases(), indent + 1).append(NL);
-        dumpRepositoryPolicy(sb, "snapshotsPolicy", repository.getSnapshots(), indent + 1).append(NL);
+        if (repository.getReleases() != null) {
+            dumpRepositoryPolicy(sb, "releasesPolicy", repository.getReleases(), indent + 1).append(NL);
+        }
+        if (repository.getSnapshots() != null) {
+            dumpRepositoryPolicy(sb, "snapshotsPolicy", repository.getSnapshots(), indent + 1).append(NL);
+        }
         return indent(sb, indent).append('}');
     }
 
