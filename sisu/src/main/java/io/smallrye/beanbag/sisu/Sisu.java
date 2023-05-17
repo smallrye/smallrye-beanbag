@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -383,6 +384,23 @@ public final class Sisu {
         addFieldInjections(clazz, supplierBuilder, filter);
         addMethodInjections(clazz, supplierBuilder, filter);
 
+        Map<String, Field> injectableFields = new HashMap<>();
+        for (Class<?> cur = clazz; cur != null; cur = cur.getSuperclass()) {
+            Field[] declaredFields = cur.getDeclaredFields();
+            for (Field declaredField : declaredFields) {
+                int mods = declaredField.getModifiers();
+                if (Modifier.isStatic(mods) || Modifier.isFinal(mods)
+                        || injectableFields.containsKey(declaredField.getName())) {
+                    continue;
+                }
+                if (!Modifier.isPublic(mods) && !declaredField.trySetAccessible()) {
+                    // cannot inject into this field
+                    continue;
+                }
+                injectableFields.put(declaredField.getName(), declaredField);
+            }
+        }
+
         // now add our manual injections
         for (Requirement req : injections) {
             String fieldName = req.fieldName;
@@ -390,10 +408,8 @@ public final class Sisu {
                 continue;
             }
             Field field;
-            try {
-                field = clazz.getDeclaredField(fieldName);
-                field.setAccessible(true);
-            } catch (Exception e) {
+            field = injectableFields.get(fieldName);
+            if (field == null) {
                 // ignore & continue
                 continue;
             }
