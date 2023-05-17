@@ -386,6 +386,11 @@ public final class Sisu {
 
         Map<String, Field> injectableFields = new HashMap<>();
         for (Class<?> cur = clazz; cur != null; cur = cur.getSuperclass()) {
+            Module module = cur.getModule();
+            if (!module.isOpen(cur.getPackageName(), Sisu.class.getModule())) {
+                // skip fields of this class because we are not permitted to access them
+                continue;
+            }
             Field[] declaredFields = cur.getDeclaredFields();
             for (Field declaredField : declaredFields) {
                 int mods = declaredField.getModifiers();
@@ -716,7 +721,9 @@ public final class Sisu {
             if (!fieldAnnotations.isInject()) {
                 continue;
             }
-            field.setAccessible(true);
+            if (!field.trySetAccessible()) {
+                continue;
+            }
             boolean optional = fieldAnnotations.isNullable();
             final String paramNamed = fieldAnnotations.getNamed();
             final String name = paramNamed == null ? "" : paramNamed;
@@ -776,15 +783,13 @@ public final class Sisu {
             throw new RuntimeException("Cannot get declared constructors from " + clazz, t);
         }
         for (Constructor<?> constructor : declaredConstructors) {
-            if (Annotations.of(constructor).isInject()) {
-                constructor.setAccessible(true);
+            if (Annotations.of(constructor).isInject() && constructor.trySetAccessible()) {
                 return (Constructor<T>) constructor;
             } else if (constructor.getParameterCount() == 0) {
                 defaultConstructor = (Constructor<T>) constructor;
             }
         }
-        if (defaultConstructor != null) {
-            defaultConstructor.setAccessible(true);
+        if (defaultConstructor != null && defaultConstructor.trySetAccessible()) {
             return defaultConstructor;
         }
         throw new RuntimeException("No valid constructor found on " + clazz);
