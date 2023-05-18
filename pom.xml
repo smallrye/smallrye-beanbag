@@ -261,6 +261,12 @@
             </dependency>
 
             <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-transport-http</artifactId>
+                <version>${version.maven.resolver}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.maven.wagon</groupId>
                 <artifactId>wagon-provider-api</artifactId>
                 <version>${version.maven.wagon}</version>
