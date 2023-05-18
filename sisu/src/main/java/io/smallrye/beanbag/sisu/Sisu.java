@@ -399,7 +399,7 @@ public final class Sisu {
                         || injectableFields.containsKey(declaredField.getName())) {
                     continue;
                 }
-                if (!(Modifier.isPublic(mods) || open && declaredField.trySetAccessible())) {
+                if (! Modifier.isPublic(mods) && ! open) {
                     // cannot inject into this field
                     continue;
                 }
@@ -415,7 +415,7 @@ public final class Sisu {
             }
             Field field;
             field = injectableFields.get(fieldName);
-            if (field == null) {
+            if (field == null || ! field.trySetAccessible()) {
                 // ignore & continue
                 continue;
             }
