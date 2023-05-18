@@ -8,7 +8,7 @@ import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.building.SettingsBuildingException;
 import org.apache.maven.settings.building.SettingsProblem;
 import org.apache.maven.wagon.Wagon;
-import org.apache.maven.wagon.providers.http.LightweightHttpsWagon;
+import org.apache.maven.wagon.providers.http.HttpWagon;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
 import org.eclipse.aether.RepositorySystem;
@@ -58,11 +58,9 @@ public final class MavenFactoryTestCase {
         mavenFactory.getContainer().requireBean(Wagon.class);
         mavenFactory.getContainer().requireBean(Wagon.class, "file");
         mavenFactory.getContainer().requireBean(Wagon.class, "http");
-        mavenFactory.getContainer().requireBean(Wagon.class, "https");
 
-        LightweightHttpsWagon wagon = mavenFactory.getContainer().requireBean(LightweightHttpsWagon.class);
+        HttpWagon wagon = mavenFactory.getContainer().requireBean(HttpWagon.class);
         assertNotNull(wagon);
-        assertNotNull(wagon.getAuthenticator());
     }
 
     private static void handleProblem(SettingsProblem settingsProblem) {
