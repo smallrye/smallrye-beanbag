@@ -392,13 +392,14 @@ public final class Sisu {
                 continue;
             }
             Field[] declaredFields = cur.getDeclaredFields();
+            boolean open = cur.getModule().isOpen(cur.getPackageName(), Sisu.class.getModule());
             for (Field declaredField : declaredFields) {
                 int mods = declaredField.getModifiers();
                 if (Modifier.isStatic(mods) || Modifier.isFinal(mods)
                         || injectableFields.containsKey(declaredField.getName())) {
                     continue;
                 }
-                if (!Modifier.isPublic(mods) && !declaredField.trySetAccessible()) {
+                if (!(Modifier.isPublic(mods) || open && declaredField.trySetAccessible())) {
                     // cannot inject into this field
                     continue;
                 }
@@ -712,6 +713,8 @@ public final class Sisu {
         if (superclass != null) {
             addFieldInjections(superclass, supplierBuilder, filter);
         }
+        boolean open = clazz.getModule().isOpen(clazz.getPackageName(), Sisu.class.getModule());
+        boolean publicClass = Modifier.isPublic(clazz.getModifiers());
         for (Field field : clazz.getDeclaredFields()) {
             final int mods = field.getModifiers();
             if (Modifier.isStatic(mods) || Modifier.isFinal(mods)) {
@@ -721,7 +724,7 @@ public final class Sisu {
             if (!fieldAnnotations.isInject()) {
                 continue;
             }
-            if (!field.trySetAccessible()) {
+            if (!(publicClass && Modifier.isPublic(mods) || open && field.trySetAccessible())) {
                 continue;
             }
             boolean optional = fieldAnnotations.isNullable();
@@ -751,6 +754,8 @@ public final class Sisu {
             for (Class<?> anInterface : clazz.getInterfaces()) {
                 addMethodInjections((Class<? super T>) anInterface, supplierBuilder, filter);
             }
+            boolean open = clazz.getModule().isOpen(clazz.getPackageName(), Sisu.class.getModule());
+            boolean publicClass = Modifier.isPublic(clazz.getModifiers());
             for (Method method : clazz.getDeclaredMethods()) {
                 final int mods = method.getModifiers();
                 if (Modifier.isStatic(mods)) {
@@ -761,6 +766,9 @@ public final class Sisu {
                     continue;
                 }
                 if (method.getParameterCount() != 1) {
+                    continue;
+                }
+                if (!(publicClass && Modifier.isPublic(mods) || open && method.trySetAccessible())) {
                     continue;
                 }
                 final String named = methodAnnotations.getNamed();
@@ -782,15 +790,22 @@ public final class Sisu {
         } catch (Throwable t) {
             throw new RuntimeException("Cannot get declared constructors from " + clazz, t);
         }
+        boolean open = clazz.getModule().isOpen(clazz.getPackageName(), Sisu.class.getModule());
+        boolean publicClass = Modifier.isPublic(clazz.getModifiers());
         for (Constructor<?> constructor : declaredConstructors) {
-            if (Annotations.of(constructor).isInject() && constructor.trySetAccessible()) {
+            final int mods = constructor.getModifiers();
+            if (Annotations.of(constructor).isInject()
+                    && (publicClass && Modifier.isPublic(mods) || open && constructor.trySetAccessible())) {
                 return (Constructor<T>) constructor;
             } else if (constructor.getParameterCount() == 0) {
                 defaultConstructor = (Constructor<T>) constructor;
             }
         }
-        if (defaultConstructor != null && defaultConstructor.trySetAccessible()) {
-            return defaultConstructor;
+        if (defaultConstructor != null) {
+            final int mods = defaultConstructor.getModifiers();
+            if (publicClass && Modifier.isPublic(mods) || open && defaultConstructor.trySetAccessible()) {
+                return defaultConstructor;
+            }
         }
         throw new RuntimeException("No valid constructor found on " + clazz);
     }
