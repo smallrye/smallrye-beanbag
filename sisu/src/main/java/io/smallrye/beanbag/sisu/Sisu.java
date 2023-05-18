@@ -164,14 +164,18 @@ public final class Sisu {
 
     private void parseComponents(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
             throws XMLStreamException {
+        Map<Class<?>, Component<?>> map = new HashMap<>();
         while (xr.hasNext()) {
             switch (xr.next()) {
                 case XMLStreamReader.END_ELEMENT: {
+                    for (Component<?> component : map.values()) {
+                        addBeanFromXml(component, filter, classLoader);
+                    }
                     return;
                 }
                 case XMLStreamReader.START_ELEMENT: {
                     if (xr.getLocalName().equals("component")) {
-                        parseComponent(xr, classLoader, filter);
+                        parseComponent(xr, map, classLoader, filter);
                     } else {
                         consume(xr);
                     }
@@ -181,7 +185,8 @@ public final class Sisu {
         }
     }
 
-    private void parseComponent(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+    private void parseComponent(final XMLStreamReader xr, final Map<Class<?>, Component<?>> map, final ClassLoader classLoader,
+            final DependencyFilter filter)
             throws XMLStreamException {
 
         Class<?> clazz = null;
@@ -281,8 +286,44 @@ public final class Sisu {
             }
         }
 
-        // add the bean the plexus way
-        addBeanFromXml(clazz, type, name, singleton, filter, requirements, classLoader);
+        Component<?> component = map.get(clazz);
+        if (component == null) {
+            component = Component.of(clazz, type, name, singleton, requirements);
+            map.put(clazz, component);
+        } else {
+            assert clazz == component.clazz;
+            if (component.types != null) {
+                component.types.add((Class) type);
+            }
+            // else already unrestricted; ignore new type restriction
+            if (name != null && !name.equals(component.name)) {
+                Set<String> aliases = component.aliases;
+                if (aliases == null) {
+                    aliases = component.aliases = new HashSet<>();
+                }
+                aliases.add(name);
+            }
+            component.requirements = concatenate(component.requirements, requirements);
+        }
+    }
+
+    static <T> List<T> concatenate(List<T> a, List<T> b) {
+        if (a.isEmpty()) {
+            if (b.isEmpty()) {
+                return List.of();
+            } else {
+                return b;
+            }
+        } else {
+            if (b.isEmpty()) {
+                return a;
+            } else {
+                ArrayList<T> out = new ArrayList<>(a.size() + b.size());
+                out.addAll(a);
+                out.addAll(b);
+                return List.copyOf(out);
+            }
+        }
     }
 
     private List<Requirement> parseRequirements(final XMLStreamReader xr, final ClassLoader classLoader,
@@ -352,28 +393,56 @@ public final class Sisu {
         return null;
     }
 
+    static final class Component<T> {
+        final Class<T> clazz;
+        Set<Class<? super T>> types;
+        String name;
+        Set<String> aliases;
+        boolean singleton;
+        List<Requirement> requirements;
+
+        Component(final Class<T> clazz) {
+            this.clazz = clazz;
+        }
+
+        public static <T> Component<T> of(final Class<?> clazz, final Class<?> type, final String name, final boolean singleton,
+                final List<Requirement> requirements) {
+            Component<T> c = new Component<>((Class<T>) clazz);
+            if (type != null && type != clazz) {
+                c.types = new HashSet<>(Set.of((Class<? super T>) type));
+            }
+            c.name = name;
+            c.singleton = singleton;
+            c.requirements = requirements;
+            return c;
+        }
+    }
+
     static final class Requirement {
         String injectType;
         String injectName;
         String fieldName;
     }
 
-    private <T> void addBeanFromXml(final Class<T> clazz, final Class<?> type, final String named, final boolean singleton,
-            final DependencyFilter filter, List<Requirement> injections, final ClassLoader classLoader) {
+    private <T> void addBeanFromXml(Component<T> component, final DependencyFilter filter, final ClassLoader classLoader) {
+        Class<T> clazz = component.clazz;
         if (!visited.add(clazz)) {
             // duplicate
             return;
         }
         final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
         final Annotations clazzAnnotations = Annotations.of(clazz);
-        if (singleton) {
+        if (component.singleton) {
             beanBuilder.setSingleton(true);
         }
-        if (named != null && !named.isEmpty()) {
-            beanBuilder.setName(named);
+        if (component.name != null && !component.name.isEmpty()) {
+            beanBuilder.setName(component.name);
         }
-        if (type != null && !type.equals(clazz)) {
-            beanBuilder.addRestrictedTypes(List.of((Class<? super T>) type));
+        if (component.aliases != null) {
+            component.aliases.forEach(beanBuilder::addAlias);
+        }
+        if (component.types != null) {
+            beanBuilder.addRestrictedTypes(List.copyOf(component.types));
         }
         final BeanBag.SupplierBuilder<T> supplierBuilder = beanBuilder.buildSupplier();
         // despite being a legacy component, there's no reason why we couldn't inject things like normal
@@ -416,7 +485,7 @@ public final class Sisu {
         }
 
         // now add our manual injections
-        for (Requirement req : injections) {
+        for (Requirement req : component.requirements) {
             String fieldName = req.fieldName;
             if (fieldName == null) {
                 continue;

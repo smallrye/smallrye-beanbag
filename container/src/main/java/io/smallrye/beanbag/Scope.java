@@ -263,6 +263,24 @@ public final class Scope {
         throw nbe;
     }
 
+    <T> T requireBean(final BeanDefinition<T> definition) {
+        Class<T> type = definition.getType();
+        final List<Bean<? extends T>> beans = getBeansByType(type);
+        for (Bean<? extends T> bean : beans) {
+            if (bean.getDefinition() == definition) {
+                return bean.get(resolutionScope);
+            }
+        }
+        StringBuilder msgBuilder = new StringBuilder("No matching bean available: type is ");
+        msgBuilder.append(type);
+        String name = definition.getName();
+        if (!name.isEmpty()) {
+            msgBuilder.append(", name is \"").append(name).append('"');
+        }
+        final NoSuchBeanException nbe = new NoSuchBeanException(msgBuilder.toString());
+        throw nbe;
+    }
+
     public BeanBag getContainer() {
         return container;
     }
