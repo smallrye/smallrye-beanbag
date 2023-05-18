@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -23,12 +24,7 @@ public final class BeanBag {
         final List<BeanDefinition<?>> definitions = new ArrayList<>();
         final List<BeanDefinition<?>> singletonBeans = new ArrayList<>();
         for (BeanBuilder<?> beanBuilder : builder.beanBuilders) {
-            BeanDefinition<?> definition = makeDefinition(beanBuilder);
-            if (beanBuilder.singleton) {
-                singletonBeans.add(definition);
-            } else {
-                definitions.add(definition);
-            }
+            addDefinitionsTo(beanBuilder, beanBuilder.singleton ? singletonBeans : definitions);
         }
         // create a copy of the non-singleton scope so singletons can inject from there
         final ScopeDefinition scopeDefinition = new ScopeDefinition(List.copyOf(definitions));
@@ -36,14 +32,22 @@ public final class BeanBag {
         this.scopeDefinition = scopeDefinition;
     }
 
-    private <T> BeanDefinition<T> makeDefinition(final BeanBuilder<T> beanBuilder) {
+    private <T> void addDefinitionsTo(final BeanBuilder<T> beanBuilder, List<BeanDefinition<?>> definitions) {
         final String name = beanBuilder.name;
+        final Set<String> aliases = beanBuilder.aliases;
         final Set<Class<? super T>> restrictedTypes = Set
                 .copyOf(Objects.requireNonNullElse(beanBuilder.restrictedTypes, List.of()));
         final BeanSupplier<T> supplier = beanBuilder.supplier;
         final int priority = beanBuilder.priority;
         final Class<T> type = beanBuilder.type;
-        return new BeanDefinition<>(name, priority, type, restrictedTypes, supplier);
+        BeanDefinition<T> definition = new BeanDefinition<>(name, priority, type, restrictedTypes, supplier);
+        definitions.add(definition);
+        if (aliases != null) {
+            for (String alias : aliases) {
+                definitions.add(
+                        new BeanDefinition<>(alias, priority, type, restrictedTypes, scope -> scope.requireBean(definition)));
+            }
+        }
     }
 
     /**
@@ -185,6 +189,7 @@ public final class BeanBag {
         private int priority = 0;
         private List<Class<? super T>> restrictedTypes;
         private String name = "";
+        private Set<String> aliases;
         private BeanSupplier<T> supplier;
         private boolean singleton;
 
@@ -214,6 +219,21 @@ public final class BeanBag {
         public BeanBuilder<T> setName(final String name) {
             Assert.checkNotNullParam("name", name);
             this.name = name;
+            return this;
+        }
+
+        /**
+         * Add another name that this bean can be identified by.
+         *
+         * @param alias the bean alias (must not be {@code null})
+         * @return this builder (not {@code null})
+         */
+        public BeanBuilder<T> addAlias(final String alias) {
+            Assert.checkNotNullParam("alias", alias);
+            if (aliases == null) {
+                aliases = new HashSet<>();
+            }
+            aliases.add(alias);
             return this;
         }
 

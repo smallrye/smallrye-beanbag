@@ -58,6 +58,7 @@ public final class MavenFactoryTestCase {
         mavenFactory.getContainer().requireBean(Wagon.class);
         mavenFactory.getContainer().requireBean(Wagon.class, "file");
         mavenFactory.getContainer().requireBean(Wagon.class, "http");
+        mavenFactory.getContainer().requireBean(Wagon.class, "https");
 
         HttpWagon wagon = mavenFactory.getContainer().requireBean(HttpWagon.class);
         assertNotNull(wagon);
