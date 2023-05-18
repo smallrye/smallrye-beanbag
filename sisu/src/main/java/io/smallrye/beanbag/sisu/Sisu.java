@@ -272,6 +272,14 @@ public final class Sisu {
                 }
             }
         }
+        if (clazz == null) {
+            if (type == null) {
+                // ??? no component
+                return;
+            } else {
+                clazz = type;
+            }
+        }
 
         // add the bean the plexus way
         addBeanFromXml(clazz, type, name, singleton, filter, requirements, classLoader);
