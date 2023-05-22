@@ -277,8 +277,8 @@ public final class Sisu {
                 }
             }
         }
-        if (clazz == null) {
-            if (type == null) {
+        if (clazz == null || clazz.isInterface()) {
+            if (type == null || type.isInterface()) {
                 // ??? no component
                 return;
             } else {
