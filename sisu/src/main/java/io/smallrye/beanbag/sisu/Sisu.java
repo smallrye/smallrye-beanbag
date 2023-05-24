@@ -99,6 +99,7 @@ public final class Sisu {
             while (e.hasMoreElements()) {
                 final URL url = e.nextElement();
                 final URLConnection conn = url.openConnection();
+                final Map<Class<?>, Component<?>> map = new HashMap<>();
                 try (InputStream is = conn.getInputStream()) {
                     try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
                         try (BufferedReader br = new BufferedReader(isr)) {
@@ -107,7 +108,7 @@ public final class Sisu {
                                 while (xr.hasNext()) {
                                     if (xr.next() == XMLStreamReader.START_ELEMENT) {
                                         if (xr.getLocalName().equals("component-set")) {
-                                            parseComponentSet(xr, classLoader, filter);
+                                            parseComponentSet(xr, map, classLoader, filter);
                                         } else {
                                             consume(xr);
                                         }
@@ -118,6 +119,9 @@ public final class Sisu {
                             throw new RuntimeException(ex);
                         }
                     }
+                }
+                for (Component<?> component : map.values()) {
+                    addBeanFromXml(component, filter, classLoader);
                 }
             }
         } catch (IOException ex) {
@@ -143,7 +147,8 @@ public final class Sisu {
         }
     }
 
-    private void parseComponentSet(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+    private void parseComponentSet(final XMLStreamReader xr, final Map<Class<?>, Component<?>> map,
+            final ClassLoader classLoader, final DependencyFilter filter)
             throws XMLStreamException {
         while (xr.hasNext()) {
             switch (xr.next()) {
@@ -152,7 +157,7 @@ public final class Sisu {
                 }
                 case XMLStreamReader.START_ELEMENT: {
                     if (xr.getLocalName().equals("components")) {
-                        parseComponents(xr, classLoader, filter);
+                        parseComponents(xr, map, classLoader, filter);
                     } else {
                         consume(xr);
                     }
@@ -162,15 +167,12 @@ public final class Sisu {
         }
     }
 
-    private void parseComponents(final XMLStreamReader xr, final ClassLoader classLoader, final DependencyFilter filter)
+    private void parseComponents(final XMLStreamReader xr, final Map<Class<?>, Component<?>> map, final ClassLoader classLoader,
+            final DependencyFilter filter)
             throws XMLStreamException {
-        Map<Class<?>, Component<?>> map = new HashMap<>();
         while (xr.hasNext()) {
             switch (xr.next()) {
                 case XMLStreamReader.END_ELEMENT: {
-                    for (Component<?> component : map.values()) {
-                        addBeanFromXml(component, filter, classLoader);
-                    }
                     return;
                 }
                 case XMLStreamReader.START_ELEMENT: {
@@ -426,10 +428,6 @@ public final class Sisu {
 
     private <T> void addBeanFromXml(Component<T> component, final DependencyFilter filter, final ClassLoader classLoader) {
         Class<T> clazz = component.clazz;
-        if (!visited.add(clazz)) {
-            // duplicate
-            return;
-        }
         final BeanBag.BeanBuilder<T> beanBuilder = builder.addBean(clazz);
         final Annotations clazzAnnotations = Annotations.of(clazz);
         if (component.singleton) {
