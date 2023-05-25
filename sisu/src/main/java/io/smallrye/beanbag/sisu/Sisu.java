@@ -729,6 +729,8 @@ public final class Sisu {
             return;
         } else if (itr.match(":-")) {
             b.append(properties.getProperty(key, parseExpressionString(itr, recursion, false, properties)));
+            // consume end of expr
+            itr.match("}");
             return;
         } else {
             // ???
