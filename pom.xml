@@ -24,7 +24,7 @@
         <!-- versions -->
 
         <version.io.smallrye.common>2.1.0</version.io.smallrye.common>
-        <version.org.jboss.logging>3.5.0.Final</version.org.jboss.logging>
+        <version.org.jboss.logging>3.5.1.Final</version.org.jboss.logging>
 
         <version.org.eclipse.sisu>0.3.5</version.org.eclipse.sisu>
         <version.javax.inject>1</version.javax.inject>
