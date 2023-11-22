@@ -33,7 +33,7 @@
         <version.maven.filtering>3.3.0</version.maven.filtering>
         <version.maven.plugin-annotations>3.7.1</version.maven.plugin-annotations>
         <version.maven.project>2.2.1</version.maven.project>
-        <version.maven.resolver>1.9.16</version.maven.resolver>
+        <version.maven.resolver>1.9.17</version.maven.resolver>
         <version.maven.wagon>3.5.3</version.maven.wagon>
         <version.plexus.interpolation>1.26</version.plexus.interpolation>
         <version.plexus.utils>4.0.0</version.plexus.utils>
@@ -41,7 +41,7 @@
         <version.plexus.cipher>2.1.0</version.plexus.cipher>
 
         <version.commons.codec>1.16.0</version.commons.codec>
-        <version.commons.lang3>3.13.0</version.commons.lang3>
+        <version.commons.lang3>3.14.0</version.commons.lang3>
         <version.commons.io>2.15.0</version.commons.io>
         <version.httpcomponents.httpclient>4.5.14</version.httpcomponents.httpclient>
         <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
