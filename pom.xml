@@ -46,7 +46,7 @@
         <version.httpcomponents.httpclient>4.5.14</version.httpcomponents.httpclient>
         <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
         <version.jsoup>1.17.2</version.jsoup>
-        <version.org.junit.jupiter>5.10.1</version.org.junit.jupiter>
+        <version.org.junit.jupiter>5.10.2</version.org.junit.jupiter>
 
         <version.sundrio>0.103.1</version.sundrio>
 
