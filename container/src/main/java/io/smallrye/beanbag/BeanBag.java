@@ -135,9 +135,77 @@ public final class BeanBag {
      */
     public static final class Builder {
 
+        /**
+         * Java package names that should be excluded during bean discovery
+         */
+        private List<String> excludePackages = List.of();
+
+        /**
+         * Java package names that should be included during bean discovery,
+         * unless they also match {@link #excludePackages}
+         */
+        private List<String> includePackages = List.of();
+
         private final List<BeanBuilder<?>> beanBuilders = new ArrayList<>();
 
         Builder() {
+        }
+
+        /**
+         * Exclude beans whose Java packages start with the value of the argument.
+         *
+         * @param packageName Java package name to exclude during bean discovery
+         * @return this builder instance
+         */
+        public Builder excludePackage(String packageName) {
+            Assert.checkNotNullParam("packageName", packageName);
+            if (excludePackages.isEmpty()) {
+                excludePackages = new ArrayList<>();
+            }
+            excludePackages.add(packageName);
+            return this;
+        }
+
+        /**
+         * Include beans whose Java packages start with the value of the argument,
+         * unless there is a matching exclude package filter.
+         * If inclusions weren't configured, all packages are assumed to be included.
+         *
+         * @param packageName Java package name to include during bean discovery
+         * @return this builder instance
+         */
+        public Builder includePackage(String packageName) {
+            Assert.checkNotNullParam("packageName", packageName);
+            if (includePackages.isEmpty()) {
+                includePackages = new ArrayList<>();
+            }
+            includePackages.add(packageName);
+            return this;
+        }
+
+        public boolean isTypeFilteredOut(String type) {
+            return isPackageExcluded(type) || !isPackageIncluded(type);
+        }
+
+        private boolean isPackageIncluded(String type) {
+            if (includePackages.isEmpty()) {
+                return true;
+            }
+            for (var filter : includePackages) {
+                if (type.startsWith(filter)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean isPackageExcluded(String type) {
+            for (var filter : excludePackages) {
+                if (type.startsWith(filter)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /**

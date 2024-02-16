@@ -78,7 +78,7 @@ public final class Sisu {
                                     line = line.substring(0, idx);
                                 }
                                 final String className = line.trim();
-                                if (className.isBlank()) {
+                                if (className.isBlank() || builder.isTypeFilteredOut(className)) {
                                     continue;
                                 }
                                 final Class<?> clazz;
@@ -209,6 +209,9 @@ public final class Sisu {
                             if (clazz == null) {
                                 // try to load it up
                                 final String className = xr.getElementText();
+                                if (builder.isTypeFilteredOut(className)) {
+                                    continue;
+                                }
                                 try {
                                     clazz = Class.forName(className, false, classLoader);
                                 } catch (ClassNotFoundException | LinkageError ex) {
@@ -229,6 +232,9 @@ public final class Sisu {
                         case "role": {
                             if (type == null) {
                                 final String className = xr.getElementText();
+                                if (builder.isTypeFilteredOut(className)) {
+                                    continue;
+                                }
                                 try {
                                     type = Class.forName(className, false, classLoader);
                                 } catch (ClassNotFoundException | LinkageError ex) {

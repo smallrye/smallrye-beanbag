@@ -2,6 +2,7 @@ package io.smallrye.beanbag.maven;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.maven.settings.Settings;
@@ -15,6 +16,12 @@ import org.eclipse.aether.RepositorySystem;
 import org.junit.jupiter.api.Test;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 import org.sonatype.plexus.components.sec.dispatcher.SecDispatcherException;
+
+import io.smallrye.beanbag.maven.beans.Phaseolus;
+import io.smallrye.beanbag.maven.beans.Pisum;
+import io.smallrye.beanbag.maven.beans.Vigna;
+import io.smallrye.beanbag.maven.beans.africa.Cyamopsis;
+import io.smallrye.beanbag.maven.beans.africa.Tamarindus;
 
 /**
  *
@@ -62,6 +69,59 @@ public final class MavenFactoryTestCase {
 
         HttpWagon wagon = mavenFactory.getContainer().requireBean(HttpWagon.class);
         assertNotNull(wagon);
+    }
+
+    @Test
+    public void testAllTestBeansDiscovered() {
+        final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader());
+        assertNotNull(mavenFactory.getContainer().requireBean(Phaseolus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Pisum.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Vigna.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Tamarindus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Cyamopsis.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Wagon.class));
+    }
+
+    @Test
+    public void testAllTestBeansDiscoveredWithCommonPackage() {
+        final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader(), builder -> {
+            builder.includePackage("io.smallrye.beanbag.maven.beans");
+        });
+        assertNotNull(mavenFactory.getContainer().requireBean(Phaseolus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Pisum.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Vigna.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Tamarindus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Cyamopsis.class));
+        // Wagon is not included
+        assertNull(mavenFactory.getContainer().getOptionalBean(Wagon.class));
+    }
+
+    @Test
+    public void testExclusionOfIncludedPackages() {
+        final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader(), builder -> {
+            builder.includePackage("io.smallrye.beanbag.maven.beans")
+                    .excludePackage("io.smallrye.beanbag.maven.beans.africa");
+        });
+        assertNotNull(mavenFactory.getContainer().requireBean(Phaseolus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Pisum.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Vigna.class));
+        assertNull(mavenFactory.getContainer().getOptionalBean(Tamarindus.class));
+        assertNull(mavenFactory.getContainer().getOptionalBean(Cyamopsis.class));
+        // Wagon is not included
+        assertNull(mavenFactory.getContainer().getOptionalBean(Wagon.class));
+    }
+
+    @Test
+    public void testPackageExclusion() {
+        final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader(), builder -> {
+            builder.excludePackage("io.smallrye.beanbag.maven.beans.africa");
+        });
+        assertNotNull(mavenFactory.getContainer().requireBean(Phaseolus.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Pisum.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Vigna.class));
+        assertNull(mavenFactory.getContainer().getOptionalBean(Tamarindus.class));
+        assertNull(mavenFactory.getContainer().getOptionalBean(Cyamopsis.class));
+        assertNotNull(mavenFactory.getContainer().requireBean(Wagon.class));
     }
 
     private static void handleProblem(SettingsProblem settingsProblem) {

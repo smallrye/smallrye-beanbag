@@ -1,0 +1,10 @@
+<component-set>
+  <components>
+    <component>
+      <implementation>io.smallrye.beanbag.maven.beans.Vigna</implementation>
+    </component>
+    <component>
+      <role>io.smallrye.beanbag.maven.beans.africa.Cyamopsis</role>
+    </component>
+  </components>
+</component-set>
