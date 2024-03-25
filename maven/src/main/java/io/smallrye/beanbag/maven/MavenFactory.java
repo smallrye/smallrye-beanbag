@@ -62,7 +62,11 @@ public final class MavenFactory {
                 .setSupplier(Scope::getContainer)
                 .build();
         // add our simple plexus container
-        sisu.addClass(PlexusContainerImpl.class, dependencyFilter);
+        builder.addBean(PlexusContainerImpl.class)
+                .setPriority(-100)
+                .setSingleton(true)
+                .setSupplier(scope -> new PlexusContainerImpl(scope.getContainer()))
+                .build();
         for (ClassLoader classLoader : classLoaders) {
             sisu.addClassLoader(classLoader, dependencyFilter);
         }
