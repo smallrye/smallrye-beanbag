@@ -60,6 +60,13 @@ public final class MavenFactoryTestCase {
     }
 
     @Test
+    public void testPlexusContainerImpl() throws ComponentLookupException {
+        final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader());
+        PlexusContainer pc = mavenFactory.getContainer().requireBean(PlexusContainerImpl.class);
+        pc.lookup(SecDispatcher.class);
+    }
+
+    @Test
     public void testWagonThings() {
         final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader());
         mavenFactory.getContainer().requireBean(Wagon.class);

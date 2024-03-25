@@ -4,11 +4,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import javax.annotation.Priority;
-import javax.inject.Inject;
-import javax.inject.Named;
-import javax.inject.Singleton;
-
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.classworlds.realm.ClassRealm;
 import org.codehaus.plexus.component.composition.CycleDetectedInComponentGraphException;
@@ -20,14 +15,10 @@ import org.codehaus.plexus.context.Context;
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.DependencyFilter;
 
-@Named()
-@Priority(-100)
-@Singleton
 class PlexusContainerImpl implements PlexusContainer {
     private final BeanBag bb;
 
-    @Inject
-    public PlexusContainerImpl(final BeanBag bb) {
+    PlexusContainerImpl(final BeanBag bb) {
         this.bb = bb;
     }
 
