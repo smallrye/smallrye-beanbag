@@ -9,7 +9,7 @@
     <parent>
         <groupId>io.smallrye</groupId>
         <artifactId>smallrye-parent</artifactId>
-        <version>42</version>
+        <version>43</version>
     </parent>
 
     <name>SmallRye BeanBag: Parent</name>
@@ -23,7 +23,7 @@
 
         <!-- versions -->
 
-        <version.io.smallrye.common>2.3.0</version.io.smallrye.common>
+        <version.io.smallrye.common>2.4.0</version.io.smallrye.common>
         <version.org.jboss.logging>3.5.3.Final</version.org.jboss.logging>
 
         <version.org.eclipse.sisu>0.3.5</version.org.eclipse.sisu>
