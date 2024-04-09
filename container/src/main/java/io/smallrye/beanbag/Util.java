@@ -27,22 +27,18 @@ public final class Util {
         Assert.checkNotNullParam("input", input);
         Assert.checkNotNullParam("mapper", mapper);
         final int size = input.size();
-        switch (size) {
-            case 0:
-                return List.of();
-            case 1:
-                return List.of(mapper.apply(input.get(0)));
-            case 2:
-                return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)));
-            case 3:
-                return List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)), mapper.apply(input.get(2)));
-            default: {
+        return switch (size) {
+            case 0 -> List.of();
+            case 1 -> List.of(mapper.apply(input.get(0)));
+            case 2 -> List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)));
+            case 3 -> List.of(mapper.apply(input.get(0)), mapper.apply(input.get(1)), mapper.apply(input.get(2)));
+            default -> {
                 final R[] array = generator.apply(size);
                 for (int i = 0; i < size; i++) {
                     array[i] = mapper.apply(input.get(i));
                 }
-                return List.of(array);
+                yield List.of(array);
             }
-        }
+        };
     }
 }

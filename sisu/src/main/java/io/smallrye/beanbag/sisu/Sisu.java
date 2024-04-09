@@ -136,13 +136,10 @@ public final class Sisu {
     private void consume(final XMLStreamReader xr) throws XMLStreamException {
         while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     return;
                 }
-                case XMLStreamReader.START_ELEMENT: {
-                    consume(xr);
-                    break;
-                }
+                case XMLStreamReader.START_ELEMENT -> consume(xr);
             }
         }
     }
@@ -152,16 +149,15 @@ public final class Sisu {
             throws XMLStreamException {
         while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     return;
                 }
-                case XMLStreamReader.START_ELEMENT: {
+                case XMLStreamReader.START_ELEMENT -> {
                     if (xr.getLocalName().equals("components")) {
                         parseComponents(xr, map, classLoader, filter);
                     } else {
                         consume(xr);
                     }
-                    break;
                 }
             }
         }
@@ -172,16 +168,15 @@ public final class Sisu {
             throws XMLStreamException {
         while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     return;
                 }
-                case XMLStreamReader.START_ELEMENT: {
+                case XMLStreamReader.START_ELEMENT -> {
                     if (xr.getLocalName().equals("component")) {
                         parseComponent(xr, map, classLoader, filter);
                     } else {
                         consume(xr);
                     }
-                    break;
                 }
             }
         }
@@ -199,13 +194,13 @@ public final class Sisu {
 
         loop: while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     // all done
                     break loop;
                 }
-                case XMLStreamReader.START_ELEMENT: {
+                case XMLStreamReader.START_ELEMENT -> {
                     switch (xr.getLocalName()) {
-                        case "implementation": {
+                        case "implementation" -> {
                             if (clazz == null) {
                                 // try to load it up
                                 final String className = xr.getElementText();
@@ -227,9 +222,8 @@ public final class Sisu {
                             } else {
                                 consume(xr);
                             }
-                            break;
                         }
-                        case "role": {
+                        case "role" -> {
                             if (type == null) {
                                 final String className = xr.getElementText();
                                 if (builder.isTypeFilteredOut(className)) {
@@ -244,9 +238,8 @@ public final class Sisu {
                             } else {
                                 consume(xr);
                             }
-                            break;
                         }
-                        case "role-hint": {
+                        case "role-hint" -> {
                             if (name == null) {
                                 name = xr.getElementText();
                                 if (name.equals("default")) {
@@ -255,33 +248,16 @@ public final class Sisu {
                             } else {
                                 consume(xr);
                             }
-                            break;
                         }
-                        case "instantiation-strategy": {
+                        case "instantiation-strategy" -> {
                             switch (xr.getElementText()) {
-                                case "per-lookup": {
-                                    singleton = false;
-                                    break;
-                                }
-                                case "poolable":
-                                case "keep-alive":
-                                case "singleton": {
-                                    singleton = true;
-                                    break;
-                                }
+                                case "per-lookup" -> singleton = false;
+                                case "poolable", "keep-alive", "singleton" -> singleton = true;
                             }
-                            break;
                         }
-                        case "requirements": {
-                            requirements = parseRequirements(xr, classLoader, filter);
-                            break;
-                        }
-                        default: {
-                            consume(xr);
-                            break;
-                        }
+                        case "requirements" -> requirements = parseRequirements(xr, classLoader, filter);
+                        default -> consume(xr);
                     }
-                    break;
                 }
             }
         }
@@ -339,22 +315,18 @@ public final class Sisu {
         List<Requirement> list = null;
         loop: while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     break loop;
                 }
-                case XMLStreamReader.START_ELEMENT: {
+                case XMLStreamReader.START_ELEMENT -> {
                     switch (xr.getLocalName()) {
-                        case "requirement": {
+                        case "requirement" -> {
                             if (list == null) {
                                 list = new ArrayList<>();
                             }
                             list.add(parseRequirement(xr, classLoader, filter));
-                            break;
                         }
-                        default: {
-                            consume(xr);
-                            break;
-                        }
+                        default -> consume(xr);
                     }
                 }
             }
@@ -367,34 +339,23 @@ public final class Sisu {
         final Requirement requirement = new Requirement();
         while (xr.hasNext()) {
             switch (xr.next()) {
-                case XMLStreamReader.END_ELEMENT: {
+                case XMLStreamReader.END_ELEMENT -> {
                     return requirement;
                 }
-                case XMLStreamReader.START_ELEMENT: {
+                case XMLStreamReader.START_ELEMENT -> {
                     switch (xr.getLocalName()) {
-                        case "role": {
-                            requirement.injectType = xr.getElementText();
-                            break;
-                        }
-                        case "role-hint": {
+                        case "role" -> requirement.injectType = xr.getElementText();
+                        case "role-hint" -> {
                             requirement.injectName = xr.getElementText();
                             if (requirement.injectName.equals("default")) {
                                 requirement.injectName = "";
                             }
-                            break;
                         }
-                        case "field":
-                        case "field-name": {
-                            requirement.fieldName = xr.getElementText();
-                            break;
-                        }
+                        case "field", "field-name" -> requirement.fieldName = xr.getElementText();
+
                         // todo: configuration
-                        default: {
-                            consume(xr);
-                            break;
-                        }
+                        default -> consume(xr);
                     }
-                    break;
                 }
             }
         }
@@ -745,8 +706,7 @@ public final class Sisu {
     }
 
     private static Type getTypeArgument(Type type, int position) {
-        if (type instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) type;
+        if (type instanceof final ParameterizedType pt) {
             return pt.getActualTypeArguments()[position];
         } else {
             throw new IllegalArgumentException("No type argument given for " + type);
@@ -756,19 +716,15 @@ public final class Sisu {
     private static Class<?> getRawType(Type type) {
         if (type instanceof Class<?>) {
             return (Class<?>) type;
-        } else if (type instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) type;
+        } else if (type instanceof final ParameterizedType pt) {
             return getRawType(pt.getRawType());
-        } else if (type instanceof GenericArrayType) {
-            GenericArrayType gat = (GenericArrayType) type;
+        } else if (type instanceof final GenericArrayType gat) {
             // Class.arrayType() is JDK 12+
             return getArrayType(getRawType(gat.getGenericComponentType()));
-        } else if (type instanceof WildcardType) {
-            WildcardType wt = (WildcardType) type;
+        } else if (type instanceof final WildcardType wt) {
             final Type[] ub = wt.getUpperBounds();
             return ub.length >= 1 ? getRawType(ub[0]) : Object.class;
-        } else if (type instanceof TypeVariable<?>) {
-            TypeVariable<?> tv = (TypeVariable<?>) type;
+        } else if (type instanceof final TypeVariable<?> tv) {
             final Type[] bounds = tv.getBounds();
             return bounds.length >= 1 ? getRawType(bounds[0]) : Object.class;
         } else {
@@ -959,28 +915,23 @@ public final class Sisu {
                 final Class<? extends Annotation> annoType = annotation.annotationType();
                 final String annoName = annoType.getName();
                 switch (annoName) {
-                    case "javax.inject.Inject":
+                    case "javax.inject.Inject" -> {
                         inject = true;
-                        break;
-                    case "javax.inject.Singleton":
-                    case "org.eclipse.sisu.EagerSingleton":
-                    case "org.sonatype.inject.EagerSingleton":
-                        singleton = true;
-                        break;
-                    case "javax.inject.Named":
-                        named = GET_NAMED_VALUE_FN.get(annoType).apply(annotation);
-                        break;
-                    case "org.eclipse.sisu.Nullable":
-                    case "org.sonatype.inject.Nullable":
-                        nullable = true;
-                        break;
-                    case "org.eclipse.sisu.Priority": {
-                        priority = GET_PRIORITY_VALUE_FN.get(annoType).apply(annotation).intValue();
-                        break;
                     }
-                    case "org.eclipse.sisu.Typed": {
+                    case "javax.inject.Singleton", "org.eclipse.sisu.EagerSingleton", "org.sonatype.inject.EagerSingleton" -> {
+                        singleton = true;
+                    }
+                    case "javax.inject.Named" -> {
+                        named = GET_NAMED_VALUE_FN.get(annoType).apply(annotation);
+                    }
+                    case "org.eclipse.sisu.Nullable", "org.sonatype.inject.Nullable" -> {
+                        nullable = true;
+                    }
+                    case "org.eclipse.sisu.Priority" -> {
+                        priority = GET_PRIORITY_VALUE_FN.get(annoType).apply(annotation).intValue();
+                    }
+                    case "org.eclipse.sisu.Typed" -> {
                         typed = List.of(GET_TYPED_VALUE_FN.get(annoType).apply(annotation));
-                        break;
                     }
                 }
             }
