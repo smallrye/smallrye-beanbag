@@ -4,7 +4,7 @@
 
     <groupId>io.smallrye.beanbag</groupId>
     <artifactId>smallrye-beanbag-parent</artifactId>
-    <version>1.4.2-SNAPSHOT</version>
+    <version>1.5.0-SNAPSHOT</version>
 
     <parent>
         <groupId>io.smallrye</groupId>
@@ -17,8 +17,6 @@
     <description>A trivial programmatic bean container implementation</description>
 
     <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- versions -->
