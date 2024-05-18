@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import io.smallrye.common.constraint.Assert;
 
@@ -146,7 +147,10 @@ public final class BeanBag {
          */
         private List<String> includePackages = List.of();
 
-        private final List<BeanBuilder<?>> beanBuilders = new ArrayList<>();
+        /**
+         * Bean builders may be added concurrently
+         */
+        private final Collection<BeanBuilder<?>> beanBuilders = new ConcurrentLinkedDeque<>();
 
         Builder() {
         }
