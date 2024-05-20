@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 import javax.inject.Provider;
@@ -47,8 +48,21 @@ import io.smallrye.common.constraint.Assert;
  * A utility which can configure a {@link BeanBag} using Eclipse SISU resources and annotations.
  */
 public final class Sisu {
-    private final Set<Class<?>> visited = new HashSet<>();
+    private final Map<Class<?>, Class<?>> visited = new ConcurrentHashMap<>();
     private final BeanBag.Builder builder;
+
+    /**
+     * Reads metadata from a {@link URL} and loads beans
+     */
+    private interface BeanLoader {
+        /**
+         * Reads metadata from a {@link URL} and loads beans
+         *
+         * @param url URL of the metadata to read
+         * @throws IOException in case of a failure reading meatadata
+         */
+        void loadBeans(URL url) throws IOException;
+    }
 
     private Sisu(final BeanBag.Builder builder) {
         this.builder = builder;
@@ -63,69 +77,105 @@ public final class Sisu {
     public void addClassLoader(ClassLoader classLoader, DependencyFilter filter) {
         Assert.checkNotNullParam("classLoader", classLoader);
         Assert.checkNotNullParam("filter", filter);
-        try {
-            Enumeration<URL> e = classLoader.getResources("META-INF/sisu/javax.inject.Named");
+
+        final BeanLoadingTaskRunner taskRunner = new BeanLoadingTaskRunner();
+
+        loadBeans(classLoader, "META-INF/sisu/javax.inject.Named", url -> addNamed(classLoader, filter, url), taskRunner);
+        // these are deprecated but still used in Maven < 4.x
+        loadBeans(classLoader, "META-INF/plexus/components.xml", url -> addPlexusComponents(classLoader, filter, url),
+                taskRunner);
+
+        taskRunner.waitForCompletion();
+    }
+
+    /**
+     * Schedules tasks to read bean metadata from a classpath resource and create beans.
+     *
+     * @param classLoader class loader to load the metadata resource from
+     * @param resource classpath metadata resource name
+     * @param beanLoader bean loader that reads the metadata and creates beans
+     * @param taskRunner bean loading task runner
+     */
+    private void loadBeans(ClassLoader classLoader, String resource, BeanLoader beanLoader, BeanLoadingTaskRunner taskRunner) {
+        taskRunner.run(() -> {
+            final Enumeration<URL> e = classLoader.getResources(resource);
             while (e.hasMoreElements()) {
                 final URL url = e.nextElement();
-                final URLConnection conn = url.openConnection();
-                try (InputStream is = conn.getInputStream()) {
-                    try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-                        try (BufferedReader br = new BufferedReader(isr)) {
-                            String line;
-                            while ((line = (br.readLine())) != null) {
-                                int idx = line.indexOf('#');
-                                if (idx != -1) {
-                                    line = line.substring(0, idx);
+                taskRunner.run(() -> beanLoader.loadBeans(url));
+            }
+        });
+    }
+
+    /**
+     * Creates beans from Plexus component metadata.
+     *
+     * @param classLoader classloader bean classes should be loaded from
+     * @param filter bean dependency filter
+     * @param url Plexus component metadata URL
+     * @throws IOException in case of a failure
+     */
+    private void addPlexusComponents(ClassLoader classLoader, DependencyFilter filter, URL url) throws IOException {
+        final URLConnection conn = url.openConnection();
+        final Map<Class<?>, Component<?>> map = new HashMap<>();
+        try (InputStream is = conn.getInputStream()) {
+            try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                try (BufferedReader br = new BufferedReader(isr)) {
+                    XMLStreamReader xr = XMLInputFactory.newInstance().createXMLStreamReader(br);
+                    try (XMLCloser ignored = xr::close) {
+                        while (xr.hasNext()) {
+                            if (xr.next() == XMLStreamReader.START_ELEMENT) {
+                                if (xr.getLocalName().equals("component-set")) {
+                                    parseComponentSet(xr, map, classLoader, filter);
+                                } else {
+                                    consume(xr);
                                 }
-                                final String className = line.trim();
-                                if (className.isBlank() || builder.isTypeFilteredOut(className)) {
-                                    continue;
-                                }
-                                final Class<?> clazz;
-                                try {
-                                    clazz = Class.forName(className, false, classLoader);
-                                } catch (ClassNotFoundException | LinkageError ex) {
-                                    // todo: log it
-                                    continue;
-                                }
-                                addClass(clazz, filter);
                             }
                         }
                     }
+                } catch (XMLStreamException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
-            // these are deprecated but still used in Maven < 4.x
-            e = classLoader.getResources("META-INF/plexus/components.xml");
-            while (e.hasMoreElements()) {
-                final URL url = e.nextElement();
-                final URLConnection conn = url.openConnection();
-                final Map<Class<?>, Component<?>> map = new HashMap<>();
-                try (InputStream is = conn.getInputStream()) {
-                    try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
-                        try (BufferedReader br = new BufferedReader(isr)) {
-                            XMLStreamReader xr = XMLInputFactory.newInstance().createXMLStreamReader(br);
-                            try (XMLCloser ignored = xr::close) {
-                                while (xr.hasNext()) {
-                                    if (xr.next() == XMLStreamReader.START_ELEMENT) {
-                                        if (xr.getLocalName().equals("component-set")) {
-                                            parseComponentSet(xr, map, classLoader, filter);
-                                        } else {
-                                            consume(xr);
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (XMLStreamException ex) {
-                            throw new RuntimeException(ex);
+        }
+        for (Component<?> component : map.values()) {
+            addBeanFromXml(component, filter, classLoader);
+        }
+    }
+
+    /**
+     * Creates beans from {@code META-INF/sisu/javax.inject.Named} metadata.
+     *
+     * @param classLoader classloader bean classes should be loaded from
+     * @param filter bean dependency filter
+     * @param url metadata URL
+     * @throws IOException in case of a failure
+     */
+    private void addNamed(ClassLoader classLoader, DependencyFilter filter, URL url) throws IOException {
+        final URLConnection conn = url.openConnection();
+        try (InputStream is = conn.getInputStream()) {
+            try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+                try (BufferedReader br = new BufferedReader(isr)) {
+                    String line;
+                    while ((line = (br.readLine())) != null) {
+                        int idx = line.indexOf('#');
+                        if (idx != -1) {
+                            line = line.substring(0, idx);
                         }
+                        final String className = line.trim();
+                        if (className.isBlank() || builder.isTypeFilteredOut(className)) {
+                            continue;
+                        }
+                        final Class<?> clazz;
+                        try {
+                            clazz = Class.forName(className, false, classLoader);
+                        } catch (ClassNotFoundException | LinkageError ex) {
+                            // todo: log it
+                            continue;
+                        }
+                        addClass(clazz, filter);
                     }
                 }
-                for (Component<?> component : map.values()) {
-                    addBeanFromXml(component, filter, classLoader);
-                }
             }
-        } catch (IOException ex) {
-            throw new RuntimeException(ex);
         }
     }
 
@@ -498,7 +548,7 @@ public final class Sisu {
     public <T> void addClass(Class<T> clazz, DependencyFilter filter) {
         Assert.checkNotNullParam("clazz", clazz);
         Assert.checkNotNullParam("filter", filter);
-        if (!visited.add(clazz)) {
+        if (visited.putIfAbsent(clazz, clazz) != null) {
             // duplicate
             return;
         }
