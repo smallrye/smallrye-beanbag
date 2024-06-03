@@ -2,3 +2,4 @@ name: SmallRye BeanBag
 release:
     current-version: 1.5.0
     next-version: 1.5.1-SNAPSHOT
+
