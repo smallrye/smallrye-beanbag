@@ -346,18 +346,10 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <artifactId>maven-compiler-plugin</artifactId>
-                    <executions>
-                        <execution>
-                            <id>default-compile</id>
-                            <goals>
-                                <goal>compile</goal>
-                            </goals>
-                            <configuration>
-                                <release>11</release>
-                            </configuration>
-                        </execution>
-                    </executions>
+                    <artifactId>maven-javadoc-plugin</artifactId>
+                    <configuration>
+                        <source>17</source>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
@@ -382,8 +374,8 @@
                         <configuration>
                             <rules>
                                 <requireJavaVersion>
-                                    <version>11</version>
-                                    <message>This project must be built with Java 11 or later.</message>
+                                    <version>17</version>
+                                    <message>This project must be built with Java 17 or later.</message>
                                 </requireJavaVersion>
                             </rules>
                         </configuration>
