@@ -120,7 +120,7 @@ public final class Sisu {
         try (InputStream is = conn.getInputStream()) {
             try (InputStreamReader isr = new InputStreamReader(is, StandardCharsets.UTF_8)) {
                 try (BufferedReader br = new BufferedReader(isr)) {
-                    XMLStreamReader xr = XMLInputFactory.newInstance().createXMLStreamReader(br);
+                    XMLStreamReader xr = XMLInputFactory.newDefaultFactory().createXMLStreamReader(br);
                     try (XMLCloser ignored = xr::close) {
                         while (xr.hasNext()) {
                             if (xr.next() == XMLStreamReader.START_ELEMENT) {
