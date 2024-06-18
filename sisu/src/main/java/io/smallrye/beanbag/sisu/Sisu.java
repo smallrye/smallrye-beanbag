@@ -138,7 +138,11 @@ public final class Sisu {
             }
         }
         for (Component<?> component : map.values()) {
-            addBeanFromXml(component, filter, classLoader);
+            try {
+                addBeanFromXml(component, filter, classLoader);
+            } catch (LinkageError ignored) {
+                // skip
+            }
         }
     }
 
@@ -165,14 +169,12 @@ public final class Sisu {
                         if (className.isBlank() || builder.isTypeFilteredOut(className)) {
                             continue;
                         }
-                        final Class<?> clazz;
                         try {
-                            clazz = Class.forName(className, false, classLoader);
+                            final Class<?> clazz = Class.forName(className, false, classLoader);
+                            addClass(clazz, filter);
                         } catch (ClassNotFoundException | LinkageError ex) {
                             // todo: log it
-                            continue;
                         }
-                        addClass(clazz, filter);
                     }
                 }
             }
@@ -265,7 +267,11 @@ public final class Sisu {
                                 }
                                 if (new Annotations(clazz).getNamed() != null) {
                                     // it's a proper component; use the annotations to parse it
-                                    addClass(clazz, filter);
+                                    try {
+                                        addClass(clazz, filter);
+                                    } catch (LinkageError ex) {
+                                        // todo: log it
+                                    }
                                     consume(xr);
                                     return;
                                 }
