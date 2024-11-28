@@ -43,7 +43,7 @@
         <version.commons.io>2.18.0</version.commons.io>
         <version.httpcomponents.httpclient>4.5.14</version.httpcomponents.httpclient>
         <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
-        <version.jsoup>1.18.1</version.jsoup>
+        <version.jsoup>1.18.2</version.jsoup>
         <version.org.junit.jupiter>5.11.3</version.org.junit.jupiter>
 
         <version.sundrio>0.200.0</version.sundrio>
