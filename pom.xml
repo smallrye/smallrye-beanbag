@@ -35,7 +35,7 @@
         <version.maven.wagon>3.5.3</version.maven.wagon>
         <version.plexus.interpolation>1.27</version.plexus.interpolation>
         <version.plexus.utils>4.0.2</version.plexus.utils>
-        <version.plexus.sec-dispatcher>2.0</version.plexus.sec-dispatcher>
+        <version.plexus.sec-dispatcher>4.1.0</version.plexus.sec-dispatcher>
         <version.plexus.cipher>2.1.0</version.plexus.cipher>
 
         <version.commons.codec>1.18.0</version.commons.codec>
