@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.io.IOException;
+
 import org.apache.maven.settings.Settings;
 import org.apache.maven.settings.building.SettingsBuildingException;
 import org.apache.maven.settings.building.SettingsProblem;
@@ -12,10 +14,10 @@ import org.apache.maven.wagon.Wagon;
 import org.apache.maven.wagon.providers.http.HttpWagon;
 import org.codehaus.plexus.PlexusContainer;
 import org.codehaus.plexus.component.repository.exception.ComponentLookupException;
+import org.codehaus.plexus.components.secdispatcher.SecDispatcher;
+import org.codehaus.plexus.components.secdispatcher.SecDispatcherException;
 import org.eclipse.aether.RepositorySystem;
 import org.junit.jupiter.api.Test;
-import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
-import org.sonatype.plexus.components.sec.dispatcher.SecDispatcherException;
 
 import io.smallrye.beanbag.maven.beans.Phaseolus;
 import io.smallrye.beanbag.maven.beans.Pisum;
@@ -46,7 +48,7 @@ public final class MavenFactoryTestCase {
     }
 
     @Test
-    public void testNamedSecDispatcherProvider() throws SecDispatcherException {
+    public void testNamedSecDispatcherProvider() throws SecDispatcherException, IOException {
         final MavenFactory mavenFactory = MavenFactory.create(MavenFactory.class.getClassLoader());
         SecDispatcher sd = mavenFactory.getContainer().requireBean(SecDispatcher.class, "maven");
         assertEquals("hello", sd.decrypt("hello"));

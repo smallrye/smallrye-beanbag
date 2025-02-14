@@ -24,6 +24,7 @@ import org.apache.maven.settings.building.SettingsBuildingException;
 import org.apache.maven.settings.building.SettingsBuildingRequest;
 import org.apache.maven.settings.building.SettingsBuildingResult;
 import org.apache.maven.settings.building.SettingsProblem;
+import org.codehaus.plexus.components.secdispatcher.SecDispatcher;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
@@ -35,7 +36,6 @@ import org.eclipse.aether.repository.RepositoryPolicy;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.eclipse.aether.util.repository.DefaultMirrorSelector;
 import org.eclipse.aether.util.repository.DefaultProxySelector;
-import org.sonatype.plexus.components.sec.dispatcher.SecDispatcher;
 
 import io.smallrye.beanbag.BeanBag;
 import io.smallrye.beanbag.BeanInstantiationException;
@@ -287,7 +287,8 @@ public final class MavenFactory {
         }
         DefaultMirrorSelector mirrorSelector = new DefaultMirrorSelector();
         for (Mirror mirror : settings.getMirrors()) {
-            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.getMirrorOf(),
+            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.isBlocked(),
+                    mirror.getMirrorOf(),
                     mirror.getMirrorOfLayouts());
         }
         Set<RemoteRepository> mirroredRepos = new LinkedHashSet<RemoteRepository>();
