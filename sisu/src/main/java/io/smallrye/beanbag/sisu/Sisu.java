@@ -985,6 +985,7 @@ public final class Sisu {
                     }
                     case "org.eclipse.sisu.Priority" -> {
                         priority = GET_PRIORITY_VALUE_FN.get(annoType).apply(annotation).intValue();
+                        hasPriority = true;
                     }
                     case "org.eclipse.sisu.Typed" -> {
                         typed = List.of(GET_TYPED_VALUE_FN.get(annoType).apply(annotation));
