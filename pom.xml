@@ -21,7 +21,7 @@
 
         <!-- versions -->
 
-        <version.io.smallrye.common>2.13.8</version.io.smallrye.common>
+        <version.io.smallrye.common>2.13.9</version.io.smallrye.common>
         <version.org.jboss.logging>3.6.1.Final</version.org.jboss.logging>
 
         <version.org.eclipse.sisu>0.3.5</version.org.eclipse.sisu>
