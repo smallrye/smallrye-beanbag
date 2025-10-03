@@ -48,7 +48,7 @@
 
         <version.sundrio>0.220.1</version.sundrio>
 
-        <version.maven.enforcer>3.6.1</version.maven.enforcer>
+        <version.maven.enforcer>3.6.2</version.maven.enforcer>
     </properties>
 
     <packaging>pom</packaging>
