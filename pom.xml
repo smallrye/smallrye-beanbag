@@ -46,7 +46,7 @@
         <version.jsoup>1.21.2</version.jsoup>
         <version.org.junit.jupiter>6.0.0</version.org.junit.jupiter>
 
-        <version.sundrio>0.220.1</version.sundrio>
+        <version.sundrio>0.230.0</version.sundrio>
 
         <version.maven.enforcer>3.6.2</version.maven.enforcer>
     </properties>
