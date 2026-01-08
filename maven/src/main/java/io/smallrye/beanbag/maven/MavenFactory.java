@@ -287,8 +287,8 @@ public final class MavenFactory {
         }
         DefaultMirrorSelector mirrorSelector = new DefaultMirrorSelector();
         for (Mirror mirror : settings.getMirrors()) {
-            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.isBlocked(), mirror.getMirrorOf(),
-                    mirror.getMirrorOfLayouts());
+            mirrorSelector.add(mirror.getId(), mirror.getUrl(), mirror.getLayout(), false, mirror.isBlocked(),
+                    mirror.getMirrorOf(), mirror.getMirrorOfLayouts());
         }
         Set<RemoteRepository> mirroredRepos = new LinkedHashSet<RemoteRepository>();
         for (RemoteRepository repository : basicList) {
