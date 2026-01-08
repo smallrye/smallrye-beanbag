@@ -4,7 +4,7 @@
 
     <groupId>io.smallrye.beanbag</groupId>
     <artifactId>smallrye-beanbag-parent</artifactId>
-    <version>1.5.4-SNAPSHOT</version>
+    <version>1.6.1</version>
 
     <parent>
         <groupId>io.smallrye</groupId>
@@ -70,7 +70,7 @@
         <connection>scm:git:git@github.com:smallrye/smallrye-beanbag.git</connection>
         <developerConnection>scm:git:git@github.com:smallrye/smallrye-beanbag.git</developerConnection>
         <url>https://github.com/smallrye/smallrye-beanbag/</url>
-        <tag>HEAD</tag>
+        <tag>1.6.1</tag>
     </scm>
 
     <developers>
