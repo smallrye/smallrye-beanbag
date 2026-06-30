@@ -44,7 +44,6 @@
         <version.httpcomponents.httpclient>4.5.14</version.httpcomponents.httpclient>
         <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
         <version.jsoup>1.22.2</version.jsoup>
-        <version.org.junit.jupiter>6.1.0</version.org.junit.jupiter>
 
         <version.sundrio>0.300.0</version.sundrio>
 
@@ -328,16 +327,6 @@
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-sec-dispatcher</artifactId>
                 <version>${version.plexus.sec-dispatcher}</version>
-
-            </dependency>
-
-            <!-- Test -->
-
-            <dependency>
-                <groupId>org.junit.jupiter</groupId>
-                <artifactId>junit-jupiter</artifactId>
-                <scope>test</scope>
-                <version>${version.org.junit.jupiter}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
