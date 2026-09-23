@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.smallrye.beanbag</groupId>
+        <artifactId>smallrye-beanbag-parent</artifactId>
+        <version>1.6.2-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>smallrye-beanbag-bom</artifactId>
+    <packaging>pom</packaging>
+
+    <name>SmallRye BeanBag: BOM</name>
+    <description>Centralized dependencyManagement for the SmallRye BeanBag Project</description>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>eu.maveniverse.maven.plugins</groupId>
+                <artifactId>bom-builder3</artifactId>
+                <version>${version.bom-builder}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>build-bom</goal>
+                        </goals>
+                        <configuration>
+                            <attach>true</attach>
+                            <bomArtifactId>${project.artifactId}</bomArtifactId>
+                            <bomName>${project.name}</bomName>
+                            <bomDescription>${project.description}</bomDescription>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
