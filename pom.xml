@@ -45,7 +45,7 @@
         <version.httpcomponents.httpcore>4.4.16</version.httpcomponents.httpcore>
         <version.jsoup>1.23.2</version.jsoup>
 
-        <version.sundrio>0.400.0</version.sundrio>
+        <version.sundrio>0.400.1</version.sundrio>
 
         <version.maven.enforcer>3.6.3</version.maven.enforcer>
     </properties>
