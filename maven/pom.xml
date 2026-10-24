@@ -208,6 +208,18 @@
     <build>
         <plugins>
             <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                        SaturatedCommonPoolTestCase relies on bean loading tasks being submitted to the common pool.
+                        With a common pool parallelism of 1 (e.g. on 2-CPU machines), CompletableFuture.runAsync() uses
+                        a new thread per task instead, in which case the test would pass even if bean loading deadlocked.
+                        Fix the parallelism so the test behaves the same regardless of the number of available CPUs.
+                    -->
+                    <argLine>-Djava.util.concurrent.ForkJoinPool.common.parallelism=4</argLine>
+                </configuration>
+            </plugin>
+            <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <configuration>
                     <archive>
