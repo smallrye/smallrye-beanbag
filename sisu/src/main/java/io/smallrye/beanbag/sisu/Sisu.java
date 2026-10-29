@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import javax.inject.Provider;
 import javax.xml.stream.XMLInputFactory;
@@ -664,6 +665,11 @@ public final class Sisu {
             final Type providerType = getTypeArgument(parameterizedType, 0);
             final BeanSupplier<?> supplier = getSupplier(getRawType(providerType), providerType, name, optional, filter);
             return scope -> (Provider<?>) () -> supplier.get(scope);
+        } else if (rawType == Supplier.class && parameterizedType instanceof ParameterizedType) {
+            // Maven Resolver 2.x and Maven 3.10+ inject `Supplier<T>` the way earlier versions injected `Provider<T>`
+            final Type suppliedType = getTypeArgument(parameterizedType, 0);
+            final BeanSupplier<?> supplier = getSupplier(getRawType(suppliedType), suppliedType, name, optional, filter);
+            return scope -> (Supplier<?>) () -> supplier.get(scope);
         } else if (rawType == Set.class) {
             final Class<?> argType = getRawType(getTypeArgument(parameterizedType, 0));
             return BeanSupplier.resolvingAll(argType, name, filter).transform(Set::copyOf);
